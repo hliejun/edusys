@@ -1,0 +1,17 @@
+dist: xenial
+language: node_js
+node_js:
+  - '8'
+services:
+  - mysql
+cache: npm
+before_install:
+  # TODO: Re-config test db here...
+  - mysql -e 'CREATE DATABASE IF NOT EXISTS test;'
+install:
+  - 'npm install'
+script:
+  - 'npm run test'
+after_success:
+  # TODO: Add Codecov integration here...
+  - 'npm run coverage'

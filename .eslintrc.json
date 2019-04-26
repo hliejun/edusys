@@ -1,0 +1,28 @@
+{
+  "env": {
+      "browser": true,
+      "commonjs": true,
+      "es6": true
+  },
+  "extends": ["google", "prettier"],
+  "globals": {
+      "Atomics": "readonly",
+      "SharedArrayBuffer": "readonly"
+  },
+  "parser": "babel-eslint",
+  "parserOptions": {
+    "ecmaFeatures": {
+      "experimentalObjectRestSpread": true
+    },
+    "ecmaVersion": 2018
+  },
+  "plugins": ["import", "prettier"],
+  "rules": {
+    "import/imports-first": ["error", "absolute-first"],
+    "import/newline-after-import": "error",
+    "indent": ["error", "tab"],
+    "linebreak-style": ["error", "unix"],
+    "no-underscore-dangle": 0,
+    "quotes": ["error", "single"]
+  }
+}
