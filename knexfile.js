@@ -1,0 +1,24 @@
+const dotenv = require('dotenv');
+const path = require('path');
+
+dotenv.config({
+	path: path.resolve(__dirname, `.env.${process.env.NODE_ENV}`)
+});
+
+const config = {
+	client: process.env.DB_CLIENT,
+	connection: {
+		host: process.env.DB_HOST,
+		user: process.env.DB_USER,
+		password: process.env.DB_PASS,
+		database: process.env.DB_NAME
+	},
+	migrations: {
+		directory: path.resolve(__dirname, 'app/store/migrations')
+	},
+	seeds: {
+		directory: path.resolve(__dirname, 'app/store/seeds')
+	}
+};
+
+module.exports = config;
