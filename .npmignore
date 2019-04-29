@@ -17,8 +17,10 @@ ehthumbs.db
 # Environment variables and secrets
 .env
 .env.*
-!.env.example
 *.pem
 
 # Google App Engine generated folder
 appengine-generated/
+
+# Tests
+*.spec.js

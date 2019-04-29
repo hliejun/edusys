@@ -1,10 +1,10 @@
-import bodyParser from 'body-parser';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import express from 'express';
-import path from 'path';
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const dotenv = require('dotenv');
+const express = require('express');
+const path = require('path');
 
-import routes from './routes';
+const routes = require('./routes');
 
 // Setup variables by environment
 dotenv.config({
@@ -32,5 +32,6 @@ app.use(routes);
 const MODE = process.env.APP_ENV;
 const PORT = process.env.PORT;
 app.listen(PORT, () => {
+	// eslint-disable-next-line no-console
 	console.log(`Server running in ${MODE} mode, listening on port ${PORT}...`);
 });

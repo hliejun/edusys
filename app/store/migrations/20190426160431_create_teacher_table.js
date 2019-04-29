@@ -1,15 +1,23 @@
-exports.up = function(knex, Promise) {
+module.exports.up = function(knex, Promise) {
 	return knex.schema.createTable('teachers', function(table) {
 		table.increments('id').primary();
 		table.string('name').notNullable();
-		table.string('email').notNullable();
-		// TODO: encrypt/salt password using bcrypt in ORM...
+		table
+			.string('email')
+			.unique()
+			.notNullable();
 		table.string('password').notNullable();
-		table.timestamp('created_at').defaultTo(knex.fn.now());
-		table.timestamp('updated_at').defaultTo(knex.fn.now());
+		table
+			.dateTime('created_at', { precision: 6 })
+			.notNullable()
+			.defaultTo(knex.fn.now(6));
+		table
+			.dateTime('updated_at', { precision: 6 })
+			.notNullable()
+			.defaultTo(knex.fn.now(6));
 	});
 };
 
-exports.down = function(knex, Promise) {
+module.exports.down = function(knex, Promise) {
 	return knex.schema.dropTableIfExists('teachers');
 };
