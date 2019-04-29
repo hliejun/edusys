@@ -12,7 +12,13 @@ const config = {
 		user: process.env.DB_USER,
 		password: process.env.DB_PASS,
 		database: process.env.DB_NAME,
-		port: process.env.DB_PORT
+		port: process.env.DB_PORT,
+		typeCast: function(field, next) {
+			if (field.type === 'TINY' && field.length === 1) {
+				return field.string() === '1';
+			}
+			return next();
+		}
 	},
 	migrations: {
 		directory: path.resolve(__dirname, 'app/store/migrations')

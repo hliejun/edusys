@@ -223,7 +223,8 @@ describe('Data Access Object: Teacher', function() {
 						name: 'Jonathan Doe'
 					});
 				})
-				.then(function() {
+				.then(function(id) {
+					expect(id).to.equal(1);
 					return teacherDAO.getById({ id: 1 });
 				})
 				.then(function(result) {
@@ -274,7 +275,8 @@ describe('Data Access Object: Teacher', function() {
 						email: 'jonathan@email.com'
 					});
 				})
-				.then(function() {
+				.then(function(id) {
+					expect(id).to.equal(1);
 					return teacherDAO.getById({ id: 1 });
 				})
 				.then(function(result) {
@@ -349,7 +351,8 @@ describe('Data Access Object: Teacher', function() {
 						password: 'I<3MOE'
 					});
 				})
-				.then(function() {
+				.then(function(id) {
+					expect(id).to.equal(1);
 					return teacherDAO.getById({ id: 1 });
 				})
 				.then(function(result) {

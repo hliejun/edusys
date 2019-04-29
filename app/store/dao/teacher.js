@@ -1,4 +1,3 @@
-const bcrypt = require('bcrypt');
 const knex = require('knex');
 
 const config = require('../../../knexfile');
@@ -11,23 +10,17 @@ const {
 	IdenticalObjectError
 } = require('../../utils/errors');
 
+const { encryptPassword, comparePassword } = require('../../utils/crypto');
+
+// TODO: Validation of inputs to be done in actions level using express-validator
+
 // TODO: Use external DAOs to handle removal
-// const classDAO = require('./class');
 // const regDAO = require('./register');
 // const notifDAO = require('./notification');
 
 const db = knex(config);
 
-// TODO: Validation of inputs to be done in actions level using express-validator
-
-/* Utils */
-
 const PRECISION_TIMESTAMP = 6;
-const SALT_ROUNDS = 12;
-
-// TODO: Intercept bcrypt errors
-const encryptPassword = password => bcrypt.hash(password, SALT_ROUNDS);
-const comparePassword = bcrypt.compare;
 
 /* Creators */
 
@@ -183,10 +176,6 @@ const remove = ({ id }) =>
 	db('teachers')
 		.where({ id })
 		.del()
-		.then(() => {
-			// TODO: Cascade delete in class, selecting by teacher using DAO
-			return Promise.resolve();
-		})
 		.then(() => {
 			// TODO: Cascade delete in register, selecting by teacher using DAO
 			return Promise.resolve();
