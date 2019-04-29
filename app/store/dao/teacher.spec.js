@@ -127,9 +127,9 @@ describe('Data Access Object: Teacher', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`Teacher -- create: A teacher with email(${
+						`The email (${
 							john.email
-						}) already exists. Please register with a different and unique email address.`
+						}) already exists. Please use a different and unique email.`
 					);
 				});
 		});
@@ -254,7 +254,7 @@ describe('Data Access Object: Teacher', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						'Teacher -- setName: The teacher with the given id: 2 does not exist.'
+						'The teacher with the given id: 2 does not exist.'
 					);
 				});
 		});
@@ -305,7 +305,31 @@ describe('Data Access Object: Teacher', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						'Teacher -- setEmail: The teacher with the given id: 2 does not exist.'
+						'The teacher with the given id: 2 does not exist.'
+					);
+				});
+		});
+
+		it('should NOT update email field if provided email already exists', function() {
+			return teacherDAO
+				.create(john)
+				.then(function() {
+					return teacherDAO.create(jane);
+				})
+				.then(function() {
+					return teacherDAO.setEmail({
+						id: 2,
+						email: john.email
+					});
+				})
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(
+						Error,
+						`The email (${
+							john.email
+						}) already exists. Please use a different and unique email.`
 					);
 				});
 		});
@@ -360,7 +384,7 @@ describe('Data Access Object: Teacher', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						'Teacher -- setPassword: The teacher with the given id: 2 does not exist.'
+						'The teacher with the given id: 2 does not exist.'
 					);
 				});
 		});
@@ -379,7 +403,7 @@ describe('Data Access Object: Teacher', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						'Teacher -- setPassword: The new password provided is identical to the old one. Please choose a different password.'
+						'The new password provided is identical to the old one. Please use a different password.'
 					);
 				});
 		});
@@ -422,7 +446,7 @@ describe('Data Access Object: Teacher', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						'Teacher -- deleteById: The teacher with the given id: 2 does not exist.'
+						'The teacher with the given id: 2 does not exist.'
 					);
 				});
 		});
@@ -461,9 +485,7 @@ describe('Data Access Object: Teacher', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`Teacher -- deleteByEmail: The teacher with the given email: ${
-							bob.email
-						} does not exist.`
+						`The teacher with the given email: ${bob.email} does not exist.`
 					);
 				});
 		});
@@ -505,9 +527,7 @@ describe('Data Access Object: Teacher', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`Teacher -- validate: The teacher with the given email: ${
-							bob.email
-						} does not exist.`
+						`The teacher with the given email: ${bob.email} does not exist.`
 					);
 				});
 		});

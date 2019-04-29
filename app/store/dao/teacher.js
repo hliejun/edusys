@@ -3,6 +3,14 @@ const knex = require('knex');
 
 const config = require('../../../knexfile');
 
+const {
+	MalformedResponseError,
+	UniqueConstraintError,
+	UnknownError,
+	NotFoundError,
+	IdenticalObjectError
+} = require('../../utils/errors');
+
 // TODO: Use external DAOs to handle removal
 // const classDAO = require('./class');
 // const regDAO = require('./register');
@@ -14,10 +22,11 @@ const db = knex(config);
 
 /* Utils */
 
-const saltRounds = 12;
+const PRECISION_TIMESTAMP = 6;
+const SALT_ROUNDS = 12;
 
 // TODO: Intercept bcrypt errors
-const encryptPassword = password => bcrypt.hash(password, saltRounds);
+const encryptPassword = password => bcrypt.hash(password, SALT_ROUNDS);
 const comparePassword = bcrypt.compare;
 
 /* Creators */
@@ -25,6 +34,7 @@ const comparePassword = bcrypt.compare;
 // TODO: Validate name
 // TODO: Validate email
 // TODO: Validate password
+// TODO: Handle encryption error
 const create = ({ name, email, password }) =>
 	encryptPassword(password)
 		.then(hash =>
@@ -38,29 +48,19 @@ const create = ({ name, email, password }) =>
 			if (ids && ids.length === 1) {
 				return Promise.resolve(ids[0]);
 			} else {
-				const error = new Error(
-					'Failed to obtain the ID of the created teacher row.'
+				return Promise.reject(
+					new MalformedResponseError('id of the created teacher row', ids)
 				);
-				error.code = 'ER_RETURN_ID';
-				return Promise.reject(error);
 			}
 		})
 		.catch(error => {
-			// TODO: Handle bcrypt encrypt error
-			let errorMessage;
-			switch (error.code) {
-			case 'ER_DUP_ENTRY':
-				errorMessage = `A teacher with email(${email}) already exists. Please register with a different and unique email address.`;
-				break;
-			default:
-				errorMessage =
-						error.message ||
-						'An unknown error occurred while creating a teacher.';
+			if (error.code === 'ER_DUP_ENTRY') {
+				return Promise.reject(new UniqueConstraintError('email', email));
 			}
-			const createError = error || new Error();
-			createError.message = 'Teacher -- create: ' + errorMessage;
-			createError.code = error.code || 'ER_UNKNOWN';
-			return Promise.reject(createError);
+			if (error.code === 'ER_MAL_RESPONSE') {
+				return Promise.reject(error);
+			}
+			return Promise.reject(new UnknownError('creating a teacher'));
 		});
 
 /* Readers */
@@ -70,14 +70,9 @@ const getById = ({ id }) =>
 		.where({ id })
 		.first()
 		.catch(error => {
-			const readError =
-				error ||
-				new Error(
-					`An unknown error occurred while finding a teacher with id: ${id}.`
-				);
-			readError.message = 'Teacher -- getById: ' + readError.message;
-			readError.code = error.code || 'ER_UNKNOWN';
-			return Promise.reject(readError);
+			return Promise.reject(
+				new UnknownError(`finding a teacher with id: ${id}`)
+			);
 		});
 
 const getByEmail = ({ email }) =>
@@ -85,14 +80,9 @@ const getByEmail = ({ email }) =>
 		.where({ email })
 		.first()
 		.catch(error => {
-			const readError =
-				error ||
-				new Error(
-					`An unknown error occurred while finding a teacher with email: ${email}.`
-				);
-			readError.message = 'Teacher -- getByEmail: ' + readError.message;
-			readError.code = error.code || 'ER_UNKNOWN';
-			return Promise.reject(readError);
+			return Promise.reject(
+				new UnknownError(`finding a teacher with email: ${email}`)
+			);
 		});
 
 /* Updaters */
@@ -104,25 +94,21 @@ const setName = ({ id, name }) =>
 		.first()
 		.then(result => {
 			if (result == null) {
-				const error = new Error(
-					`The teacher with the given id: ${id} does not exist.`
+				return Promise.reject(
+					new NotFoundError(`teacher with the given id: ${id}`)
 				);
-				error.code = 'ER_NOT_FOUND';
-				return Promise.reject(error);
 			}
 			return db('teachers')
 				.where({ id })
-				.update({ name, updated_at: db.fn.now(6) });
+				.update({ name, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
 		.catch(error => {
-			const updateError =
-				error ||
-				new Error(
-					`An unknown error occurred while updating a teacher of id: ${id} with name: ${name}.`
-				);
-			updateError.message = 'Teacher -- setName: ' + updateError.message;
-			updateError.code = error.code || 'ER_UNKNOWN';
-			return Promise.reject(updateError);
+			if (error.code === 'ER_NOT_FOUND') {
+				return Promise.reject(error);
+			}
+			return Promise.reject(
+				new UnknownError(`updating a teacher of id: ${id} with name: ${name}`)
+			);
 		});
 
 // TODO: Validate email
@@ -132,39 +118,37 @@ const setEmail = ({ id, email }) =>
 		.first()
 		.then(result => {
 			if (result == null) {
-				const error = new Error(
-					`The teacher with the given id: ${id} does not exist.`
+				return Promise.reject(
+					new NotFoundError(`teacher with the given id: ${id}`)
 				);
-				error.code = 'ER_NOT_FOUND';
-				return Promise.reject(error);
 			}
 			return db('teachers')
 				.where({ id })
-				.update({ email, updated_at: db.fn.now(6) });
+				.update({ email, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
 		.catch(error => {
-			const updateError =
-				error ||
-				new Error(
-					`An unknown error occurred while updating a teacher of id: ${id} with email: ${email}.`
-				);
-			updateError.message = 'Teacher -- setEmail: ' + updateError.message;
-			updateError.code = error.code || 'ER_UNKNOWN';
-			return Promise.reject(updateError);
+			if (error.code === 'ER_DUP_ENTRY') {
+				return Promise.reject(new UniqueConstraintError('email', email));
+			}
+			if (error.code === 'ER_NOT_FOUND') {
+				return Promise.reject(error);
+			}
+			return Promise.reject(
+				new UnknownError(`updating a teacher of id: ${id} with email: ${email}`)
+			);
 		});
 
 // TODO: Validate password
+// TODO: Handle encryption error
 const setPassword = ({ id, password }) =>
 	db('teachers')
 		.where({ id })
 		.first()
 		.then(result => {
 			if (result == null) {
-				const error = new Error(
-					`The teacher with the given id: ${id} does not exist.`
+				return Promise.reject(
+					new NotFoundError(`teacher with the given id: ${id}`)
 				);
-				error.code = 'ER_NOT_FOUND';
-				return Promise.reject(error);
 			}
 			return Promise.all([
 				Promise.resolve(result),
@@ -173,29 +157,24 @@ const setPassword = ({ id, password }) =>
 		})
 		.then(([result, isSamePassword]) => {
 			if (isSamePassword) {
-				const error = new Error(
-					'The new password provided is identical to the old one. Please choose a different password.'
-				);
-				error.code = 'ER_IDEN_PASSWORD';
-				return Promise.reject(error);
+				return Promise.reject(new IdenticalObjectError('password'));
 			}
 			return encryptPassword(password, result.password);
 		})
 		.then(hash =>
 			db('teachers')
 				.where({ id })
-				.update({ password: hash, updated_at: db.fn.now(6) })
+				.update({ password: hash, updated_at: db.fn.now(PRECISION_TIMESTAMP) })
 		)
 		.catch(error => {
-			// TODO: Handle encryption error
-			const updateError =
-				error ||
-				new Error(
-					`An unknown error occurred while updating a teacher of id: ${id} with a given password.`
-				);
-			updateError.message = 'Teacher -- setPassword: ' + updateError.message;
-			updateError.code = error.code || 'ER_UNKNOWN';
-			return Promise.reject(updateError);
+			if (error.code === 'ER_NOT_FOUND' || error.code === 'ER_IDEN_OBJECT') {
+				return Promise.reject(error);
+			}
+			return Promise.reject(
+				new UnknownError(
+					`updating a teacher of id: ${id} with a given password`
+				)
+			);
 		});
 
 /* Deletors */
@@ -223,11 +202,9 @@ const deleteById = ({ id }) =>
 		.first()
 		.then(result => {
 			if (result == null) {
-				const error = new Error(
-					`The teacher with the given id: ${id} does not exist.`
+				return Promise.reject(
+					new NotFoundError(`teacher with the given id: ${id}`)
 				);
-				error.code = 'ER_NOT_FOUND';
-				return Promise.reject(error);
 			}
 			return Promise.all([Promise.resolve(result), remove({ id })]);
 		})
@@ -235,14 +212,12 @@ const deleteById = ({ id }) =>
 			return Promise.resolve(result);
 		})
 		.catch(error => {
-			const deleteError =
-				error ||
-				new Error(
-					`An unknown error occurred while deleting a teacher of id: ${id}.`
-				);
-			deleteError.message = 'Teacher -- deleteById: ' + deleteError.message;
-			deleteError.code = error.code || 'ER_UNKNOWN';
-			return Promise.reject(deleteError);
+			if (error.code === 'ER_NOT_FOUND') {
+				return Promise.reject(error);
+			}
+			return Promise.reject(
+				new UnknownError(`deleting a teacher of id: ${id}`)
+			);
 		});
 
 const deleteByEmail = ({ email }) =>
@@ -251,11 +226,9 @@ const deleteByEmail = ({ email }) =>
 		.first()
 		.then(result => {
 			if (result == null) {
-				const error = new Error(
-					`The teacher with the given email: ${email} does not exist.`
+				return Promise.reject(
+					new NotFoundError(`teacher with the given email: ${email}`)
 				);
-				error.code = 'ER_NOT_FOUND';
-				return Promise.reject(error);
 			}
 			return Promise.all([Promise.resolve(result), remove({ id: result.id })]);
 		})
@@ -263,42 +236,38 @@ const deleteByEmail = ({ email }) =>
 			return Promise.resolve(result);
 		})
 		.catch(error => {
-			const deleteError =
-				error ||
-				new Error(
-					`An unknown error occurred while deleting a teacher of email: ${email}.`
-				);
-			deleteError.message = 'Teacher -- deleteByEmail: ' + deleteError.message;
-			deleteError.code = error.code || 'ER_UNKNOWN';
-			return Promise.reject(deleteError);
+			if (error.code === 'ER_NOT_FOUND') {
+				return Promise.reject(error);
+			}
+			return Promise.reject(
+				new UnknownError(`deleting a teacher of email: ${email}`)
+			);
 		});
 
 /* Auxillary Actions */
 
-// TODO: Handle bcrypt compare error
+// TODO: Handle decryption error
 const validate = ({ email, password }) =>
 	db('teachers')
 		.where({ email })
 		.first()
 		.then(result => {
 			if (result == null) {
-				const error = new Error(
-					`The teacher with the given email: ${email} does not exist.`
+				return Promise.reject(
+					new NotFoundError(`teacher with the given email: ${email}`)
 				);
-				error.code = 'ER_NOT_FOUND';
-				return Promise.reject(error);
 			}
 			return comparePassword(password, result.password);
 		})
 		.catch(error => {
-			const validateError =
-				error ||
-				new Error(
-					`An unknown error occurred while validating the password of a teacher of email: ${email}.`
-				);
-			validateError.message = 'Teacher -- validate: ' + validateError.message;
-			validateError.code = error.code || 'ER_UNKNOWN';
-			return Promise.reject(validateError);
+			if (error.code === 'ER_NOT_FOUND') {
+				return Promise.reject(error);
+			}
+			return Promise.reject(
+				new UnknownError(
+					`validating the password of a teacher of email: ${email}`
+				)
+			);
 		});
 
 module.exports = {
