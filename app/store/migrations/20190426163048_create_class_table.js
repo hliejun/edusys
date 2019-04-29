@@ -1,7 +1,10 @@
 module.exports.up = function(knex, Promise) {
 	return knex.schema.createTable('classes', function(table) {
 		table.increments('id').primary();
-		table.string('title').notNullable();
+		table
+			.string('title')
+			.unique()
+			.notNullable();
 		table
 			.dateTime('created_at', { precision: 6 })
 			.notNullable()
