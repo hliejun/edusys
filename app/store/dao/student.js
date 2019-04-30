@@ -41,7 +41,7 @@ const create = ({ name, email }) =>
 			if (error.code === 'ER_MAL_RESPONSE') {
 				return Promise.reject(error);
 			}
-			return Promise.reject(new UnknownError('creating a student'));
+			return Promise.reject(new UnknownError('creating a student', error));
 		});
 
 /* Readers */
@@ -52,7 +52,7 @@ const getById = ({ id }) =>
 		.first()
 		.catch(error => {
 			return Promise.reject(
-				new UnknownError(`finding a student with id: ${id}`)
+				new UnknownError(`finding a student with id: ${id}`, error)
 			);
 		});
 
@@ -62,7 +62,7 @@ const getByEmail = ({ email }) =>
 		.first()
 		.catch(error => {
 			return Promise.reject(
-				new UnknownError(`finding a student with email: ${email}`)
+				new UnknownError(`finding a student with email: ${email}`, error)
 			);
 		});
 
@@ -88,7 +88,10 @@ const setName = ({ id, name }) =>
 				return Promise.reject(error);
 			}
 			return Promise.reject(
-				new UnknownError(`updating a student of id: ${id} with name: ${name}`)
+				new UnknownError(
+					`updating a student of id: ${id} with name: ${name}`,
+					error
+				)
 			);
 		});
 
@@ -115,7 +118,10 @@ const setEmail = ({ id, email }) =>
 				return Promise.reject(error);
 			}
 			return Promise.reject(
-				new UnknownError(`updating a student of id: ${id} with email: ${email}`)
+				new UnknownError(
+					`updating a student of id: ${id} with email: ${email}`,
+					error
+				)
 			);
 		});
 
@@ -143,7 +149,8 @@ const setSuspension = ({ id, isSuspended }) =>
 			}
 			return Promise.reject(
 				new UnknownError(
-					`updating a student of id: ${id} with suspension status: ${isSuspended}`
+					`updating a student of id: ${id} with suspension status: ${isSuspended}`,
+					error
 				)
 			);
 		});
@@ -179,7 +186,7 @@ const deleteById = ({ id }) =>
 				return Promise.reject(error);
 			}
 			return Promise.reject(
-				new UnknownError(`deleting a student of id: ${id}`)
+				new UnknownError(`deleting a student of id: ${id}`, error)
 			);
 		});
 
@@ -203,7 +210,7 @@ const deleteByEmail = ({ email }) =>
 				return Promise.reject(error);
 			}
 			return Promise.reject(
-				new UnknownError(`deleting a student of email: ${email}`)
+				new UnknownError(`deleting a student of email: ${email}`, error)
 			);
 		});
 

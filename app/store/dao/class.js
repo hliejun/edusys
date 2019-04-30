@@ -40,7 +40,7 @@ const create = ({ title }) =>
 			if (error.code === 'ER_MAL_RESPONSE') {
 				return Promise.reject(error);
 			}
-			return Promise.reject(new UnknownError('creating a class'));
+			return Promise.reject(new UnknownError('creating a class', error));
 		});
 
 /* Readers */
@@ -50,7 +50,9 @@ const getById = ({ id }) =>
 		.where({ id })
 		.first()
 		.catch(error => {
-			return Promise.reject(new UnknownError(`finding a class with id: ${id}`));
+			return Promise.reject(
+				new UnknownError(`finding a class with id: ${id}`, error)
+			);
 		});
 
 const getByTitle = ({ title }) =>
@@ -59,7 +61,7 @@ const getByTitle = ({ title }) =>
 		.first()
 		.catch(error => {
 			return Promise.reject(
-				new UnknownError(`finding a class with title: ${title}`)
+				new UnknownError(`finding a class with title: ${title}`, error)
 			);
 		});
 
@@ -88,7 +90,10 @@ const setTitle = ({ id, title }) =>
 				return Promise.reject(error);
 			}
 			return Promise.reject(
-				new UnknownError(`updating a class of id: ${id} with title: ${title}`)
+				new UnknownError(
+					`updating a class of id: ${id} with title: ${title}`,
+					error
+				)
 			);
 		});
 
@@ -122,7 +127,9 @@ const deleteById = ({ id }) =>
 			if (error.code === 'ER_NOT_FOUND') {
 				return Promise.reject(error);
 			}
-			return Promise.reject(new UnknownError(`deleting a class of id: ${id}`));
+			return Promise.reject(
+				new UnknownError(`deleting a class of id: ${id}`, error)
+			);
 		});
 
 const deleteByTitle = ({ title }) =>
@@ -145,7 +152,7 @@ const deleteByTitle = ({ title }) =>
 				return Promise.reject(error);
 			}
 			return Promise.reject(
-				new UnknownError(`deleting a class of title: ${title}`)
+				new UnknownError(`deleting a class of title: ${title}`, error)
 			);
 		});
 

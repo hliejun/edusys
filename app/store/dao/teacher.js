@@ -53,7 +53,7 @@ const create = ({ name, email, password }) =>
 			if (error.code === 'ER_MAL_RESPONSE') {
 				return Promise.reject(error);
 			}
-			return Promise.reject(new UnknownError('creating a teacher'));
+			return Promise.reject(new UnknownError('creating a teacher', error));
 		});
 
 /* Readers */
@@ -74,7 +74,7 @@ const getByEmail = ({ email }) =>
 		.first()
 		.catch(error => {
 			return Promise.reject(
-				new UnknownError(`finding a teacher with email: ${email}`)
+				new UnknownError(`finding a teacher with email: ${email}`, error)
 			);
 		});
 
@@ -100,7 +100,10 @@ const setName = ({ id, name }) =>
 				return Promise.reject(error);
 			}
 			return Promise.reject(
-				new UnknownError(`updating a teacher of id: ${id} with name: ${name}`)
+				new UnknownError(
+					`updating a teacher of id: ${id} with name: ${name}`,
+					error
+				)
 			);
 		});
 
@@ -127,7 +130,10 @@ const setEmail = ({ id, email }) =>
 				return Promise.reject(error);
 			}
 			return Promise.reject(
-				new UnknownError(`updating a teacher of id: ${id} with email: ${email}`)
+				new UnknownError(
+					`updating a teacher of id: ${id} with email: ${email}`,
+					error
+				)
 			);
 		});
 
@@ -165,7 +171,8 @@ const setPassword = ({ id, password }) =>
 			}
 			return Promise.reject(
 				new UnknownError(
-					`updating a teacher of id: ${id} with a given password`
+					`updating a teacher of id: ${id} with a given password`,
+					error
 				)
 			);
 		});
@@ -205,7 +212,7 @@ const deleteById = ({ id }) =>
 				return Promise.reject(error);
 			}
 			return Promise.reject(
-				new UnknownError(`deleting a teacher of id: ${id}`)
+				new UnknownError(`deleting a teacher of id: ${id}`, error)
 			);
 		});
 
@@ -229,7 +236,7 @@ const deleteByEmail = ({ email }) =>
 				return Promise.reject(error);
 			}
 			return Promise.reject(
-				new UnknownError(`deleting a teacher of email: ${email}`)
+				new UnknownError(`deleting a teacher of email: ${email}`, error)
 			);
 		});
 
@@ -254,7 +261,8 @@ const validate = ({ email, password }) =>
 			}
 			return Promise.reject(
 				new UnknownError(
-					`validating the password of a teacher of email: ${email}`
+					`validating the password of a teacher of email: ${email}`,
+					error
 				)
 			);
 		});

@@ -1,3 +1,5 @@
+// NOTE: Prevent repeated values by checking always
+
 // create register
 
 // read register by id

@@ -5,11 +5,15 @@ class UnknownError extends Error {
 	/**
 	 * Error constructor
 	 * @param {String} action The description of the action during which the error occurred.
+	 * @param {Error} error An error object received in the unhandled case.
 	 */
-	constructor(action) {
+	constructor(action, error) {
 		super(
 			`An unknown error occurred while ${action || 'executing a subroutine'}.`
 		);
+		if (error && error.message) {
+			this.message += `\n Details: ${error.message}`;
+		}
 		this.code = 'ER_GEN_UNKNOWN';
 		Error.captureStackTrace(this, UnknownError);
 	}
