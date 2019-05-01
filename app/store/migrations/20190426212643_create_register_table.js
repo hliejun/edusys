@@ -20,7 +20,7 @@ module.exports.up = function(knex, Promise) {
 			.unsigned()
 			.references('id')
 			.inTable('classes')
-			.notNullable()
+			// .notNullable() // currently accepts relations independent of classes
 			.onDelete('cascade');
 		table
 			.dateTime('created_at', { precision: 6 })
