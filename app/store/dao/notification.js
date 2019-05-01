@@ -26,11 +26,10 @@ const create = ({ teacherId, title, content }) =>
 		.then(ids => {
 			if (ids && ids.length === 1) {
 				return Promise.resolve(ids[0]);
-			} else {
-				return Promise.reject(
-					new MalformedResponseError('id of notification created', ids)
-				);
 			}
+			return Promise.reject(
+				new MalformedResponseError('id of notification created', ids)
+			);
 		});
 
 const createBySenderId = ({ teacherId, title, content }) =>

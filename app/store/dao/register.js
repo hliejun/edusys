@@ -5,6 +5,7 @@ const config = require('../../../knexfile');
 const {
 	MalformedResponseError,
 	NotFoundError,
+	UniqueConstraintError,
 	handle
 } = require('../../utils/errors');
 
@@ -18,22 +19,45 @@ const PRECISION_TIMESTAMP = 6;
 
 /* Creators */
 
-// TODO: Check for existing identical entry first
-const create = ({ teacherId, studentId, classId }) =>
+const checkIfExist = ({ teacherId, studentId, classId }) =>
 	db('registers')
-		.insert({
+		.where({
 			teacher_id: teacherId,
 			student_id: studentId,
-			class_id: classId || null
+			class_id: classId
+		})
+		.select()
+		.then(result => {
+			if (result && result.length > 0) {
+				return Promise.reject(
+					new UniqueConstraintError(
+						'register',
+						`teacher id: ${teacherId}, student id: ${studentId}, class id: ${classId}`
+					)
+				);
+			}
+			return Promise.resolve(false);
+		});
+
+const create = ({ teacherId, studentId, classId }) =>
+	checkIfExist({ teacherId, studentId, classId })
+		.then(entryExists => {
+			if (!entryExists) {
+				return db('registers').insert({
+					teacher_id: teacherId,
+					student_id: studentId,
+					class_id: classId || null
+				});
+			}
+			return false;
 		})
 		.then(ids => {
 			if (ids && ids.length === 1) {
 				return Promise.resolve(ids[0]);
-			} else {
-				return Promise.reject(
-					new MalformedResponseError('id of register created', ids)
-				);
 			}
+			return Promise.reject(
+				new MalformedResponseError('id of register created', ids)
+			);
 		});
 
 const createById = ({ teacherId, studentId, classId }) =>
@@ -245,15 +269,19 @@ const setTeacherId = ({ id, teacherId }) =>
 			updated_at: db.fn.now(PRECISION_TIMESTAMP)
 		});
 
-// TODO: Check for existing identical entry first
 const setTeacherById = ({ id, teacherId }) =>
 	getById({ id })
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
-			return teachers.getById({ id: teacherId });
+			return checkIfExist({
+				teacherId,
+				studentId: result['student_id'],
+				classId: result['class_id']
+			});
 		})
+		.then(() => teachers.getById({ id: teacherId }))
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
@@ -267,23 +295,33 @@ const setTeacherById = ({ id, teacherId }) =>
 			)
 		);
 
-// TODO: Check for existing identical entry first
 const setTeacherByEmail = ({ id, teacherEmail }) =>
 	getById({ id })
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
-			return teachers.getByEmail({ email: teacherEmail });
+			return Promise.all([
+				Promise.resolve(result),
+				teachers.getByEmail({ email: teacherEmail })
+			]);
 		})
-		.then(result => {
-			if (result == null) {
+		.then(([register, teacher]) => {
+			if (teacher == null) {
 				return Promise.reject(
 					new NotFoundError(`teacher (email: ${teacherEmail})`)
 				);
 			}
-			return setTeacherId({ id, teacherId: result.id });
+			return Promise.all([
+				Promise.resolve(teacher.id),
+				checkIfExist({
+					teacherId: teacher.id,
+					studentId: register['student_id'],
+					classId: register['class_id']
+				})
+			]);
 		})
+		.then(([teacherId]) => setTeacherId({ id, teacherId }))
 		.catch(error =>
 			handle(
 				error,
@@ -299,15 +337,19 @@ const setStudentId = ({ id, studentId }) =>
 			updated_at: db.fn.now(PRECISION_TIMESTAMP)
 		});
 
-// TODO: Check for existing identical entry first
 const setStudentById = ({ id, studentId }) =>
 	getById({ id })
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
-			return students.getById({ id: studentId });
+			return checkIfExist({
+				teacherId: result['teacher_id'],
+				studentId,
+				classId: result['class_id']
+			});
 		})
+		.then(() => students.getById({ id: studentId }))
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(new NotFoundError(`student (id: ${studentId})`));
@@ -321,23 +363,33 @@ const setStudentById = ({ id, studentId }) =>
 			)
 		);
 
-// TODO: Check for existing identical entry first
 const setStudentByEmail = ({ id, studentEmail }) =>
 	getById({ id })
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
-			return students.getByEmail({ email: studentEmail });
+			return Promise.all([
+				Promise.resolve(result),
+				students.getByEmail({ email: studentEmail })
+			]);
 		})
-		.then(result => {
-			if (result == null) {
+		.then(([register, student]) => {
+			if (student == null) {
 				return Promise.reject(
 					new NotFoundError(`student (email: ${studentEmail})`)
 				);
 			}
-			return setStudentId({ id, studentId: result.id });
+			return Promise.all([
+				Promise.resolve(student.id),
+				checkIfExist({
+					teacherId: register['teacher_id'],
+					studentId: student.id,
+					classId: register['class_id']
+				})
+			]);
 		})
+		.then(([studentId]) => setStudentId({ id, studentId }))
 		.catch(error =>
 			handle(
 				error,
@@ -345,15 +397,19 @@ const setStudentByEmail = ({ id, studentEmail }) =>
 			)
 		);
 
-// TODO: Check for existing identical entry first
 const setClass = ({ id, classId }) =>
 	getById({ id })
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
-			return classes.getById({ id: classId });
+			return checkIfExist({
+				teacherId: result['teacher_id'],
+				studentId: result['student_id'],
+				classId
+			});
 		})
+		.then(() => classes.getById({ id: classId }))
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(new NotFoundError(`class (id: ${classId})`));

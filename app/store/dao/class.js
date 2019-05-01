@@ -21,11 +21,10 @@ const create = ({ title }) =>
 		.then(ids => {
 			if (ids && ids.length === 1) {
 				return Promise.resolve(ids[0]);
-			} else {
-				return Promise.reject(
-					new MalformedResponseError('id of class created', ids)
-				);
 			}
+			return Promise.reject(
+				new MalformedResponseError('id of class created', ids)
+			);
 		})
 		.catch(error => {
 			if (error.code === 'ER_DUP_ENTRY') {

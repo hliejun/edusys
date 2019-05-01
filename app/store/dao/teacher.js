@@ -32,11 +32,10 @@ const create = ({ name, email, password }) =>
 		.then(ids => {
 			if (ids && ids.length === 1) {
 				return Promise.resolve(ids[0]);
-			} else {
-				return Promise.reject(
-					new MalformedResponseError('id of teacher created', ids)
-				);
 			}
+			return Promise.reject(
+				new MalformedResponseError('id of teacher created', ids)
+			);
 		})
 		.catch(error => {
 			if (error.code === 'ER_DUP_ENTRY') {
