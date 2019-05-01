@@ -27,6 +27,8 @@ const alice = {
 	email: 'john@email.com'
 };
 
+// TODO: Shift commented validation tests to actions
+
 describe('Data Access Object: Student', function() {
 	beforeEach(function() {
 		return db.migrate
@@ -118,13 +120,13 @@ describe('Data Access Object: Student', function() {
 				});
 		});
 
-		it('should NOT create a row if name is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT create a row if name is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 
-		it('should NOT create a row if email is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT create a row if email is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('getById', function() {
@@ -236,16 +238,13 @@ describe('Data Access Object: Student', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The student with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The student (id: 2) does not exist.');
 				});
 		});
 
-		it('should NOT update name field if provided name is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT update name field if provided name is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('setEmail', function() {
@@ -289,10 +288,7 @@ describe('Data Access Object: Student', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The student with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The student (id: 2) does not exist.');
 				});
 		});
 
@@ -320,9 +316,9 @@ describe('Data Access Object: Student', function() {
 				});
 		});
 
-		it('should NOT update email field if provided email is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT update email field if provided email is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('setSuspension', function() {
@@ -366,10 +362,7 @@ describe('Data Access Object: Student', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The student with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The student (id: 2) does not exist.');
 				});
 		});
 	});
@@ -406,10 +399,7 @@ describe('Data Access Object: Student', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The student with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The student (id: 2) does not exist.');
 				});
 		});
 	});
@@ -448,7 +438,7 @@ describe('Data Access Object: Student', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The student with the given email: ${jane.email} does not exist.`
+						`The student (email: ${jane.email}) does not exist.`
 					);
 				});
 		});

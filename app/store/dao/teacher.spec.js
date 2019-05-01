@@ -37,6 +37,8 @@ const bob = {
 	password: 'P@ssword123'
 };
 
+// TODO: Shift commented validation tests to actions
+
 describe('Data Access Object: Teacher', function() {
 	beforeEach(function() {
 		return db.migrate
@@ -134,17 +136,17 @@ describe('Data Access Object: Teacher', function() {
 				});
 		});
 
-		it('should NOT create a row if name is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT create a row if name is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 
-		it('should NOT create a row if email is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT create a row if email is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 
-		it('should NOT create a row if password does not match standard', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT create a row if password does not match standard', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('getById', function() {
@@ -253,16 +255,13 @@ describe('Data Access Object: Teacher', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The teacher with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The teacher (id: 2) does not exist.');
 				});
 		});
 
-		it('should NOT update name field if provided name is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT update name field if provided name is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('setEmail', function() {
@@ -305,10 +304,7 @@ describe('Data Access Object: Teacher', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The teacher with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The teacher (id: 2) does not exist.');
 				});
 		});
 
@@ -336,9 +332,9 @@ describe('Data Access Object: Teacher', function() {
 				});
 		});
 
-		it('should NOT update email field if provided email is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT update email field if provided email is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('setPassword', function() {
@@ -385,10 +381,7 @@ describe('Data Access Object: Teacher', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The teacher with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The teacher (id: 2) does not exist.');
 				});
 		});
 
@@ -411,9 +404,9 @@ describe('Data Access Object: Teacher', function() {
 				});
 		});
 
-		it('should NOT update password field if provided password does not match standard', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT update password field if provided password does not match standard', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('deleteById', function() {
@@ -447,10 +440,7 @@ describe('Data Access Object: Teacher', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The teacher with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The teacher (id: 2) does not exist.');
 				});
 		});
 	});
@@ -488,7 +478,7 @@ describe('Data Access Object: Teacher', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher with the given email: ${bob.email} does not exist.`
+						`The teacher (email: ${bob.email}) does not exist.`
 					);
 				});
 		});
@@ -530,7 +520,7 @@ describe('Data Access Object: Teacher', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher with the given email: ${bob.email} does not exist.`
+						`The teacher (email: ${bob.email}) does not exist.`
 					);
 				});
 		});

@@ -20,6 +20,8 @@ const math = {
 	title: 'MA1101R: Linear Algebra'
 };
 
+// TODO: Shift commented validation tests to actions
+
 describe('Data Access Object: Class', function() {
 	beforeEach(function() {
 		return db.migrate
@@ -107,9 +109,9 @@ describe('Data Access Object: Class', function() {
 				});
 		});
 
-		it('should NOT create a row if title is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT create a row if title is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('getById', function() {
@@ -215,7 +217,7 @@ describe('Data Access Object: Class', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(Error, 'The class with the given id: 2 does not exist.');
+					}).to.throw(Error, 'The class (id: 2) does not exist.');
 				});
 		});
 
@@ -243,9 +245,9 @@ describe('Data Access Object: Class', function() {
 				});
 		});
 
-		it('should NOT update title field if provided title is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT update title field if provided title is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('deleteById', function() {
@@ -278,7 +280,7 @@ describe('Data Access Object: Class', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(Error, 'The class with the given id: 2 does not exist.');
+					}).to.throw(Error, 'The class (id: 2) does not exist.');
 				});
 		});
 	});
@@ -315,7 +317,7 @@ describe('Data Access Object: Class', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The class with the given title: ${math.title} does not exist.`
+						`The class (title: ${math.title}) does not exist.`
 					);
 				});
 		});

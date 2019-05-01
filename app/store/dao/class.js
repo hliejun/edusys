@@ -5,14 +5,9 @@ const config = require('../../../knexfile');
 const {
 	MalformedResponseError,
 	UniqueConstraintError,
-	UnknownError,
-	NotFoundError
+	NotFoundError,
+	handle
 } = require('../../utils/errors');
-
-// TODO: Validation of inputs to be done in actions level using express-validator
-
-// TODO: Use external DAOs to handle removal
-// const regDAO = require('./register');
 
 const db = knex(config);
 
@@ -20,7 +15,6 @@ const PRECISION_TIMESTAMP = 6;
 
 /* Creators */
 
-// TODO: Validate title
 const create = ({ title }) =>
 	db('classes')
 		.insert({ title })
@@ -29,7 +23,7 @@ const create = ({ title }) =>
 				return Promise.resolve(ids[0]);
 			} else {
 				return Promise.reject(
-					new MalformedResponseError('id of the created class row', ids)
+					new MalformedResponseError('id of class created', ids)
 				);
 			}
 		})
@@ -37,11 +31,10 @@ const create = ({ title }) =>
 			if (error.code === 'ER_DUP_ENTRY') {
 				return Promise.reject(new UniqueConstraintError('class title', title));
 			}
-			if (error.code === 'ER_MAL_RESPONSE') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(new UnknownError('creating a class', error));
+			return handle(error, `creating class (title: ${title})`);
 		});
+
+// TODO: Add bulk create (using transactions)
 
 /* Readers */
 
@@ -49,34 +42,23 @@ const getById = ({ id }) =>
 	db('classes')
 		.where({ id })
 		.first()
-		.catch(error => {
-			return Promise.reject(
-				new UnknownError(`finding a class with id: ${id}`, error)
-			);
-		});
+		.catch(error => handle(error, `finding class (id: ${id})`));
 
 const getByTitle = ({ title }) =>
 	db('classes')
 		.where({ title })
 		.first()
-		.catch(error => {
-			return Promise.reject(
-				new UnknownError(`finding a class with title: ${title}`, error)
-			);
-		});
+		.catch(error => handle(error, `finding class (title: ${title})`));
+
+// TODO: Add bulk read (using transactions)
 
 /* Updaters */
 
-// TODO: Validate title
 const setTitle = ({ id, title }) =>
-	db('classes')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`class with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`class (id: ${id})`));
 			}
 			return db('classes')
 				.where({ id })
@@ -86,15 +68,7 @@ const setTitle = ({ id, title }) =>
 			if (error.code === 'ER_DUP_ENTRY') {
 				return Promise.reject(new UniqueConstraintError('class title', title));
 			}
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a class of id: ${id} with title: ${title}`,
-					error
-				)
-			);
+			return handle(error, `updating title of class (id: ${id}) to ${title}`);
 		});
 
 /* Deletors */
@@ -102,59 +76,35 @@ const setTitle = ({ id, title }) =>
 const remove = ({ id }) =>
 	db('classes')
 		.where({ id })
-		.del()
-		.then(() => {
-			// TODO: Cascade delete in register, selecting by class using DAO
-			return Promise.resolve();
-		});
+		.del();
 
 const deleteById = ({ id }) =>
-	db('classes')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`class with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`class (id: ${id})`));
 			}
 			return Promise.all([Promise.resolve(result), remove({ id })]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(`deleting a class of id: ${id}`, error)
-			);
-		});
+		.catch(error => handle(error, `deleting class (id: ${id})`));
 
 const deleteByTitle = ({ title }) =>
-	db('classes')
-		.where({ title })
-		.first()
+	getByTitle({ title })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`class with the given title: ${title}`)
-				);
+				return Promise.reject(new NotFoundError(`class (title: ${title})`));
 			}
 			return Promise.all([Promise.resolve(result), remove({ id: result.id })]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(`deleting a class of title: ${title}`, error)
-			);
-		});
+		.catch(error => handle(error, `deleting class (title: ${title})`));
+
+// TODO: Add bulk delete (using transactions)
 
 module.exports = {
 	create,

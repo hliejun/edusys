@@ -35,6 +35,8 @@ const quiz = {
 		'I hate to break it to you class but there is a quiz this coming Saturday. Sorry to eat into your weekend. @exchangestudent@gmail.com'
 };
 
+// TODO: Shift commented validation tests to actions
+
 describe('Data Access Object: Notification', function() {
 	beforeEach(function() {
 		return db.migrate
@@ -144,20 +146,17 @@ describe('Data Access Object: Notification', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The teacher with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The teacher (id: 2) does not exist.');
 				});
 		});
 
-		it('should NOT create a row if title is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT create a row if title is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 
-		it('should NOT create a row if content is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT create a row if content is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('createBySenderEmail', function() {
@@ -259,18 +258,18 @@ describe('Data Access Object: Notification', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher with the given email: ${jane.email} does not exist.`
+						`The teacher (email: ${jane.email}) does not exist.`
 					);
 				});
 		});
 
-		it('should NOT create a row if title is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT create a row if title is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 
-		it('should NOT create a row if content is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT create a row if content is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('getById', function() {
@@ -367,10 +366,7 @@ describe('Data Access Object: Notification', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The notification with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The notification (id: 2) does not exist.');
 				});
 		});
 
@@ -389,10 +385,7 @@ describe('Data Access Object: Notification', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The teacher with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The teacher (id: 2) does not exist.');
 				});
 		});
 	});
@@ -448,10 +441,7 @@ describe('Data Access Object: Notification', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The notification with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The notification (id: 2) does not exist.');
 				});
 		});
 
@@ -472,7 +462,7 @@ describe('Data Access Object: Notification', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher with the given email: ${jane.email} does not exist.`
+						`The teacher (email: ${jane.email}) does not exist.`
 					);
 				});
 		});
@@ -531,16 +521,13 @@ describe('Data Access Object: Notification', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The notification with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The notification (id: 2) does not exist.');
 				});
 		});
 
-		it('should NOT update title field if provided title is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT update title field if provided title is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('setContent', function() {
@@ -596,16 +583,13 @@ describe('Data Access Object: Notification', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The notification with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The notification (id: 2) does not exist.');
 				});
 		});
 
-		it('should NOT update content field if provided content is invalid', function() {
-			// TODO: Validation test...
-		});
+		// it('should NOT update content field if provided content is invalid', function() {
+		// 	// TODO: Validation test...
+		// });
 	});
 
 	context('deleteById', function() {
@@ -651,10 +635,7 @@ describe('Data Access Object: Notification', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The notification with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The notification (id: 2) does not exist.');
 				});
 		});
 	});
@@ -747,10 +728,7 @@ describe('Data Access Object: Notification', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The teacher with the given id: 2 does not exist.'
-					);
+					}).to.throw(Error, 'The teacher (id: 2) does not exist.');
 				});
 		});
 
@@ -778,10 +756,7 @@ describe('Data Access Object: Notification', function() {
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(
-						Error,
-						'The notifications with the given sender (teacher_id): 1 does not exist.'
-					);
+					}).to.throw(Error, 'The notification (sender id: 1) does not exist.');
 				});
 		});
 	});
@@ -876,7 +851,7 @@ describe('Data Access Object: Notification', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher with the given email: ${jane.email} does not exist.`
+						`The teacher (email: ${jane.email}) does not exist.`
 					);
 				});
 		});
@@ -907,9 +882,7 @@ describe('Data Access Object: Notification', function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The notifications with the given sender (email): ${
-							john.email
-						} does not exist.`
+						`The notification (sender email: ${john.email}) does not exist.`
 					);
 				});
 		});

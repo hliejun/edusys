@@ -5,14 +5,9 @@ const config = require('../../../knexfile');
 const {
 	MalformedResponseError,
 	UniqueConstraintError,
-	UnknownError,
-	NotFoundError
+	NotFoundError,
+	handle
 } = require('../../utils/errors');
-
-// TODO: Validation of inputs to be done in actions level using express-validator
-
-// TODO: Use external DAOs to handle removal
-// const regDAO = require('./register');
 
 const db = knex(config);
 
@@ -20,8 +15,6 @@ const PRECISION_TIMESTAMP = 6;
 
 /* Creators */
 
-// TODO: Validate name
-// TODO: Validate email
 const create = ({ name, email }) =>
 	db('students')
 		.insert({ name, email })
@@ -30,7 +23,7 @@ const create = ({ name, email }) =>
 				return Promise.resolve(ids[0]);
 			} else {
 				return Promise.reject(
-					new MalformedResponseError('id of the created student row', ids)
+					new MalformedResponseError('id of student created', ids)
 				);
 			}
 		})
@@ -38,11 +31,10 @@ const create = ({ name, email }) =>
 			if (error.code === 'ER_DUP_ENTRY') {
 				return Promise.reject(new UniqueConstraintError('email', email));
 			}
-			if (error.code === 'ER_MAL_RESPONSE') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(new UnknownError('creating a student', error));
+			return handle(error, `creating student (name: ${name}, email: ${email})`);
 		});
+
+// TODO: Add bulk create (using transactions)
 
 /* Readers */
 
@@ -50,61 +42,37 @@ const getById = ({ id }) =>
 	db('students')
 		.where({ id })
 		.first()
-		.catch(error => {
-			return Promise.reject(
-				new UnknownError(`finding a student with id: ${id}`, error)
-			);
-		});
+		.catch(error => handle(error, `finding student (id: ${id})`));
 
 const getByEmail = ({ email }) =>
 	db('students')
 		.where({ email })
 		.first()
-		.catch(error => {
-			return Promise.reject(
-				new UnknownError(`finding a student with email: ${email}`, error)
-			);
-		});
+		.catch(error => handle(error, `finding student (email: ${email})`));
+
+// TODO: Add bulk read (using transactions)
 
 /* Updaters */
 
-// TODO: Validate name
 const setName = ({ id, name }) =>
-	db('students')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`student with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`student (id: ${id})`));
 			}
 			return db('students')
 				.where({ id })
 				.update({ name, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a student of id: ${id} with name: ${name}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(error, `updating name of student (id: ${id}) to ${name}`)
+		);
 
-// TODO: Validate email
 const setEmail = ({ id, email }) =>
-	db('students')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`student with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`student (id: ${id})`));
 			}
 			return db('students')
 				.where({ id })
@@ -114,27 +82,14 @@ const setEmail = ({ id, email }) =>
 			if (error.code === 'ER_DUP_ENTRY') {
 				return Promise.reject(new UniqueConstraintError('email', email));
 			}
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a student of id: ${id} with email: ${email}`,
-					error
-				)
-			);
+			return handle(error, `updating email of student (id: ${id}) to ${email}`);
 		});
 
-// TODO: Validate isSuspended
 const setSuspension = ({ id, isSuspended }) =>
-	db('students')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`student with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`student (id: ${id})`));
 			}
 			return db('students')
 				.where({ id })
@@ -143,76 +98,47 @@ const setSuspension = ({ id, isSuspended }) =>
 					updated_at: db.fn.now(PRECISION_TIMESTAMP)
 				});
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a student of id: ${id} with suspension status: ${isSuspended}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(
+				error,
+				`updating suspension status of student (id: ${id}) to ${isSuspended}`
+			)
+		);
 
 /* Deletors */
 
 const remove = ({ id }) =>
 	db('students')
 		.where({ id })
-		.del()
-		.then(() => {
-			// TODO: Cascade delete in register, selecting by student using DAO
-			return Promise.resolve();
-		});
+		.del();
 
 const deleteById = ({ id }) =>
-	db('students')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`student with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`student (id: ${id})`));
 			}
 			return Promise.all([Promise.resolve(result), remove({ id })]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(`deleting a student of id: ${id}`, error)
-			);
-		});
+		.catch(error => handle(error, `deleting student (id: ${id})`));
 
 const deleteByEmail = ({ email }) =>
-	db('students')
-		.where({ email })
-		.first()
+	getByEmail({ email })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`student with the given email: ${email}`)
-				);
+				return Promise.reject(new NotFoundError(`student (email: ${email})`));
 			}
 			return Promise.all([Promise.resolve(result), remove({ id: result.id })]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(`deleting a student of email: ${email}`, error)
-			);
-		});
+		.catch(error => handle(error, `deleting student (email: ${email})`));
+
+// TODO: Add bulk delete (using transactions)
 
 module.exports = {
 	create,

@@ -1,14 +1,16 @@
-// NOTE: Prevent repeated values by checking always
-
 const knex = require('knex');
 
 const config = require('../../../knexfile');
 
 const {
 	MalformedResponseError,
-	UnknownError,
-	NotFoundError
+	NotFoundError,
+	handle
 } = require('../../utils/errors');
+
+const teachers = require('./teacher');
+const students = require('./student');
+const classes = require('./class');
 
 const db = knex(config);
 
@@ -16,6 +18,7 @@ const PRECISION_TIMESTAMP = 6;
 
 /* Creators */
 
+// TODO: Check for existing identical entry first
 const create = ({ teacherId, studentId, classId }) =>
 	db('registers')
 		.insert({
@@ -28,105 +31,81 @@ const create = ({ teacherId, studentId, classId }) =>
 				return Promise.resolve(ids[0]);
 			} else {
 				return Promise.reject(
-					new MalformedResponseError('id of the created register row', ids)
+					new MalformedResponseError('id of register created', ids)
 				);
 			}
 		});
 
 const createById = ({ teacherId, studentId, classId }) =>
-	db('teachers')
-		.where({ id: teacherId })
-		.first()
+	teachers
+		.getById({ id: teacherId })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`teacher with the given id: ${teacherId}`)
-				);
+				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
-			return db('students')
-				.where({ id: studentId })
-				.first();
+			return students.getById({ id: studentId });
 		})
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`student with the given id: ${studentId}`)
-				);
+				return Promise.reject(new NotFoundError(`student (id: ${studentId})`));
 			}
-			return db('classes')
-				.where({ id: classId })
-				.first();
+			return classId == null
+				? Promise.resolve(null)
+				: classes.getById({ id: classId });
 		})
 		.then(result => {
 			if (classId != null && result == null) {
-				return Promise.reject(
-					new NotFoundError(`class with the given id: ${classId}`)
-				);
+				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
 			return create({ teacherId, studentId, classId });
 		})
-		.catch(error => {
-			if (error.code === 'ER_MAL_RESPONSE' || error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`creating a register with teacher_id: ${teacherId}, student_id: ${studentId} and class_id: ${classId}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(
+				error,
+				`creating register (teacher id: ${teacherId}, student id: ${studentId}, class id: ${classId})`
+			)
+		);
 
 const createByEmail = ({ teacherEmail, studentEmail, classId }) =>
-	db('teachers')
-		.where({ email: teacherEmail })
-		.first()
+	teachers
+		.getByEmail({ email: teacherEmail })
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(
-					new NotFoundError(`teacher with the given email: ${teacherEmail}`)
+					new NotFoundError(`teacher (email: ${teacherEmail})`)
 				);
 			}
 			return Promise.all([
 				Promise.resolve(result.id),
-				db('students')
-					.where({ email: studentEmail })
-					.first()
+				students.getByEmail({ email: studentEmail })
 			]);
 		})
 		.then(([teacherId, result]) => {
 			if (result == null) {
 				return Promise.reject(
-					new NotFoundError(`student with the given email: ${studentEmail}`)
+					new NotFoundError(`student (email: ${studentEmail})`)
 				);
 			}
 			return Promise.all([
 				Promise.resolve(teacherId),
 				Promise.resolve(result.id),
-				db('classes')
-					.where({ id: classId })
-					.first()
+				classes.getById({ id: classId })
 			]);
 		})
 		.then(([teacherId, studentId, result]) => {
 			if (classId != null && result == null) {
-				return Promise.reject(
-					new NotFoundError(`class with the given id: ${classId}`)
-				);
+				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
 			return create({ teacherId, studentId, classId });
 		})
-		.catch(error => {
-			if (error.code === 'ER_MAL_RESPONSE' || error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`creating a register with teacher email: ${teacherEmail}, student email: ${studentEmail} and class_id: ${classId}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(
+				error,
+				`creating register (teacher email: ${teacherEmail}, student email: ${studentEmail}, class id: ${classId})`
+			)
+		);
+
+// TODO: Add bulk create (using transactions)
 
 /* Readers */
 
@@ -134,11 +113,12 @@ const getById = ({ id }) =>
 	db('registers')
 		.where({ id })
 		.first()
-		.catch(error => {
-			return Promise.reject(
-				new UnknownError(`finding a register with id: ${id}`, error)
-			);
-		});
+		.catch(error => handle(error, `finding register (id: ${id})`));
+
+const selectByTeacherId = ({ teacherId }) =>
+	db('registers')
+		.where({ teacher_id: teacherId })
+		.select();
 
 const getByTeacherId = ({ teacherId }) =>
 	db('teachers')
@@ -146,137 +126,100 @@ const getByTeacherId = ({ teacherId }) =>
 		.first()
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`teacher with the given id: ${teacherId}`)
-				);
+				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
-			return db('registers')
-				.where({ teacher_id: teacherId })
-				.select();
+			return selectByTeacherId({ teacherId });
 		})
 		.then(result => {
 			if (!result || result.length === 0) {
 				return Promise.reject(
-					new NotFoundError(`registers with the given teacher id: ${teacherId}`)
+					new NotFoundError(`register (teacher id: ${teacherId})`)
 				);
 			}
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			return Promise.reject(
-				new UnknownError(
-					`finding registers with teacher id: ${teacherId}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(error, `finding registers (teacher id: ${teacherId})`)
+		);
 
 const getByTeacherEmail = ({ teacherEmail }) =>
-	db('teachers')
-		.where({ email: teacherEmail })
-		.first()
+	teachers
+		.getByEmail({ email: teacherEmail })
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(
-					new NotFoundError(`teacher with the given email: ${teacherEmail}`)
+					new NotFoundError(`teacher (email: ${teacherEmail})`)
 				);
 			}
-			return db('registers')
-				.where({ teacher_id: result.id })
-				.select();
+			return selectByTeacherId({ teacherId: result.id });
 		})
 		.then(result => {
 			if (!result || result.length === 0) {
 				return Promise.reject(
-					new NotFoundError(
-						`registers with the given teacher email: ${teacherEmail}`
-					)
+					new NotFoundError(`register (teacher email: ${teacherEmail})`)
 				);
 			}
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			return Promise.reject(
-				new UnknownError(
-					`finding registers with teacher email: ${teacherEmail}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(error, `finding registers (teacher email: ${teacherEmail})`)
+		);
+
+const selectByStudentId = ({ studentId }) =>
+	db('registers')
+		.where({ student_id: studentId })
+		.select();
 
 const getByStudentId = ({ studentId }) =>
-	db('students')
-		.where({ id: studentId })
-		.first()
+	students
+		.getById({ id: studentId })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`student with the given id: ${studentId}`)
-				);
+				return Promise.reject(new NotFoundError(`student (id: ${studentId})`));
 			}
-			return db('registers')
-				.where({ student_id: studentId })
-				.select();
+			return selectByStudentId({ studentId });
 		})
 		.then(result => {
 			if (!result || result.length === 0) {
 				return Promise.reject(
-					new NotFoundError(`registers with the given student id: ${studentId}`)
+					new NotFoundError(`register (student id: ${studentId})`)
 				);
 			}
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			return Promise.reject(
-				new UnknownError(
-					`finding registers with student id: ${studentId}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(error, `finding registers (student id: ${studentId})`)
+		);
 
 const getByStudentEmail = ({ studentEmail }) =>
-	db('students')
-		.where({ email: studentEmail })
-		.first()
+	students
+		.getByEmail({ email: studentEmail })
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(
-					new NotFoundError(`student with the given email: ${studentEmail}`)
+					new NotFoundError(`student (email: ${studentEmail})`)
 				);
 			}
-			return db('registers')
-				.where({ student_id: result.id })
-				.select();
+			return selectByStudentId({ studentId: result.id });
 		})
 		.then(result => {
 			if (!result || result.length === 0) {
 				return Promise.reject(
-					new NotFoundError(
-						`registers with the given student email: ${studentEmail}`
-					)
+					new NotFoundError(`register (student email: ${studentEmail})`)
 				);
 			}
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			return Promise.reject(
-				new UnknownError(
-					`finding registers with student email: ${studentEmail}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(error, `finding registers (student email: ${studentEmail})`)
+		);
 
 const getByClassId = ({ classId }) =>
-	db('classes')
-		.where({ id: classId })
-		.first()
+	classes
+		.getById({ id: classId })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`class with the given id: ${classId}`)
-				);
+				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
 			return db('registers')
 				.where({ class_id: classId })
@@ -285,194 +228,135 @@ const getByClassId = ({ classId }) =>
 		.then(result => {
 			if (!result || result.length === 0) {
 				return Promise.reject(
-					new NotFoundError(`registers with the given class id: ${classId}`)
+					new NotFoundError(`register (class id: ${classId})`)
 				);
 			}
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			return Promise.reject(
-				new UnknownError(`finding registers with class id: ${classId}`, error)
-			);
-		});
+		.catch(error => handle(error, `finding registers (class id: ${classId})`));
 
 /* Updaters */
 
+const setTeacherId = ({ id, teacherId }) =>
+	db('registers')
+		.where({ id })
+		.update({
+			teacher_id: teacherId,
+			updated_at: db.fn.now(PRECISION_TIMESTAMP)
+		});
+
+// TODO: Check for existing identical entry first
 const setTeacherById = ({ id, teacherId }) =>
+	getById({ id })
+		.then(result => {
+			if (result == null) {
+				return Promise.reject(new NotFoundError(`register (id: ${id})`));
+			}
+			return teachers.getById({ id: teacherId });
+		})
+		.then(result => {
+			if (result == null) {
+				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
+			}
+			return setTeacherId({ id, teacherId });
+		})
+		.catch(error =>
+			handle(
+				error,
+				`updating teacher of register (id: ${id}) to teacher (id: ${teacherId})`
+			)
+		);
+
+// TODO: Check for existing identical entry first
+const setTeacherByEmail = ({ id, teacherEmail }) =>
+	getById({ id })
+		.then(result => {
+			if (result == null) {
+				return Promise.reject(new NotFoundError(`register (id: ${id})`));
+			}
+			return teachers.getByEmail({ email: teacherEmail });
+		})
+		.then(result => {
+			if (result == null) {
+				return Promise.reject(
+					new NotFoundError(`teacher (email: ${teacherEmail})`)
+				);
+			}
+			return setTeacherId({ id, teacherId: result.id });
+		})
+		.catch(error =>
+			handle(
+				error,
+				`updating teacher of register (id: ${id}) to teacher (email: ${teacherEmail})`
+			)
+		);
+
+const setStudentId = ({ id, studentId }) =>
 	db('registers')
 		.where({ id })
-		.first()
-		.then(result => {
-			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`register with the given id: ${id}`)
-				);
-			}
-			return db('teachers')
-				.where({ id: teacherId })
-				.first();
-		})
-		.then(result => {
-			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`teacher with the given id: ${teacherId}`)
-				);
-			}
-			return db('registers')
-				.where({ id })
-				.update({
-					teacher_id: result.id,
-					updated_at: db.fn.now(PRECISION_TIMESTAMP)
-				});
-		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a register of id: ${id} with teacher id: ${teacherId}`,
-					error
-				)
-			);
+		.update({
+			student_id: studentId,
+			updated_at: db.fn.now(PRECISION_TIMESTAMP)
 		});
 
-const setTeacherByEmail = ({ id, email }) =>
-	db('registers')
-		.where({ id })
-		.first()
-		.then(result => {
-			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`register with the given id: ${id}`)
-				);
-			}
-			return db('teachers')
-				.where({ email })
-				.first();
-		})
-		.then(result => {
-			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`teacher with the given email: ${email}`)
-				);
-			}
-			return db('registers')
-				.where({ id })
-				.update({
-					teacher_id: result.id,
-					updated_at: db.fn.now(PRECISION_TIMESTAMP)
-				});
-		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a register of id: ${id} with teacher email: ${email}`,
-					error
-				)
-			);
-		});
-
+// TODO: Check for existing identical entry first
 const setStudentById = ({ id, studentId }) =>
-	db('registers')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`register with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
-			return db('students')
-				.where({ id: studentId })
-				.first();
+			return students.getById({ id: studentId });
 		})
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`student with the given id: ${studentId}`)
-				);
+				return Promise.reject(new NotFoundError(`student (id: ${studentId})`));
 			}
-			return db('registers')
-				.where({ id })
-				.update({
-					student_id: result.id,
-					updated_at: db.fn.now(PRECISION_TIMESTAMP)
-				});
+			return setStudentId({ id, studentId });
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a register of id: ${id} with student id: ${studentId}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(
+				error,
+				`updating student of register (id: ${id}) to student (id: ${studentId})`
+			)
+		);
 
-const setStudentByEmail = ({ id, email }) =>
-	db('registers')
-		.where({ id })
-		.first()
+// TODO: Check for existing identical entry first
+const setStudentByEmail = ({ id, studentEmail }) =>
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`register with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
-			return db('students')
-				.where({ email })
-				.first();
+			return students.getByEmail({ email: studentEmail });
 		})
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(
-					new NotFoundError(`student with the given email: ${email}`)
+					new NotFoundError(`student (email: ${studentEmail})`)
 				);
 			}
-			return db('registers')
-				.where({ id })
-				.update({
-					student_id: result.id,
-					updated_at: db.fn.now(PRECISION_TIMESTAMP)
-				});
+			return setStudentId({ id, studentId: result.id });
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a register of id: ${id} with student email: ${email}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(
+				error,
+				`updating student of register (id: ${id}) to student (email: ${studentEmail})`
+			)
+		);
 
+// TODO: Check for existing identical entry first
 const setClass = ({ id, classId }) =>
-	db('registers')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`register with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
-			return db('classes')
-				.where({ id: classId })
-				.first();
+			return classes.getById({ id: classId });
 		})
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`class with the given id: ${classId}`)
-				);
+				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
 			return db('registers')
 				.where({ id })
@@ -481,29 +365,20 @@ const setClass = ({ id, classId }) =>
 					updated_at: db.fn.now(PRECISION_TIMESTAMP)
 				});
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a register of id: ${id} with class id: ${classId}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(
+				error,
+				`updating class of register (id: ${id}) to class (id: ${classId})`
+			)
+		);
 
 /* Deletors */
 
 const deleteById = ({ id }) =>
-	db('registers')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`register with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
 			return Promise.all([
 				Promise.resolve(result),
@@ -512,195 +387,147 @@ const deleteById = ({ id }) =>
 					.del()
 			]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(`deleting a register of id: ${id}`, error)
-			);
-		});
+		.catch(error => handle(error, `deleting register (id: ${id})`));
+
+// TODO: Use transactions for bulk delete
+
+const deleteByTeacher = ({ teacherId }) =>
+	db('registers')
+		.where({ teacher_id: teacherId })
+		.del();
 
 const deleteByTeacherId = ({ teacherId }) =>
-	db('teachers')
-		.where({ id: teacherId })
-		.first()
+	teachers
+		.getById({ id: teacherId })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`teacher with the given id: ${teacherId}`)
-				);
+				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
-			return db('registers')
-				.where({ teacher_id: teacherId })
-				.select();
+			return selectByTeacherId({ teacherId });
 		})
 		.then(result => {
 			if (result == null || result.length === 0) {
 				return Promise.reject(
-					new NotFoundError(`registers with the given teacher id: ${teacherId}`)
+					new NotFoundError(`registers (teacher id: ${teacherId})`)
 				);
 			}
 			return Promise.all([
 				Promise.resolve(result),
-				db('registers')
-					.where({ teacher_id: teacherId })
-					.del()
+				deleteByTeacher({ teacherId })
 			]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`deleting registers of teacher id: ${teacherId}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(error, `deleting registers (teacher id: ${teacherId})`)
+		);
 
-const deleteByTeacherEmail = ({ email }) =>
-	db('teachers')
-		.where({ email })
-		.first()
+const deleteByTeacherEmail = ({ teacherEmail }) =>
+	teachers
+		.getByEmail({ email: teacherEmail })
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(
-					new NotFoundError(`teacher with the given email: ${email}`)
+					new NotFoundError(`teacher (email: ${teacherEmail})`)
 				);
 			}
 			return Promise.all([
 				Promise.resolve(result.id),
-				db('registers')
-					.where({ teacher_id: result.id })
-					.select()
+				selectByTeacherId({ teacherId: result.id })
 			]);
 		})
 		.then(([teacherId, result]) => {
 			if (result == null || result.length === 0) {
 				return Promise.reject(
-					new NotFoundError(`registers with the given teacher email: ${email}`)
+					new NotFoundError(`register (teacher email: ${teacherEmail})`)
 				);
 			}
 			return Promise.all([
 				Promise.resolve(result),
-				db('registers')
-					.where({ teacher_id: teacherId })
-					.del()
+				deleteByTeacher({ teacherId })
 			]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(`deleting registers of teacher email: ${email}`, error)
-			);
-		});
+		.catch(error =>
+			handle(error, `deleting registers (teacher email: ${teacherEmail})`)
+		);
+
+const deleteByStudent = ({ studentId }) =>
+	db('registers')
+		.where({ student_id: studentId })
+		.del();
 
 const deleteByStudentId = ({ studentId }) =>
-	db('students')
-		.where({ id: studentId })
-		.first()
+	students
+		.getById({ id: studentId })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`student with the given id: ${studentId}`)
-				);
+				return Promise.reject(new NotFoundError(`student (id: ${studentId})`));
 			}
-			return db('registers')
-				.where({ student_id: studentId })
-				.select();
+			return selectByStudentId({ studentId });
 		})
 		.then(result => {
 			if (result == null || result.length === 0) {
 				return Promise.reject(
-					new NotFoundError(`registers with the given student id: ${studentId}`)
+					new NotFoundError(`register (student id: ${studentId})`)
 				);
 			}
 			return Promise.all([
 				Promise.resolve(result),
-				db('registers')
-					.where({ student_id: studentId })
-					.del()
+				deleteByStudent({ studentId })
 			]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`deleting registers of student id: ${studentId}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(error, `deleting registers (student id: ${studentId})`)
+		);
 
-const deleteByStudentEmail = ({ email }) =>
-	db('students')
-		.where({ email })
-		.first()
+const deleteByStudentEmail = ({ studentEmail }) =>
+	students
+		.getByEmail({ email: studentEmail })
 		.then(result => {
 			if (result == null) {
 				return Promise.reject(
-					new NotFoundError(`student with the given email: ${email}`)
+					new NotFoundError(`student (email: ${studentEmail})`)
 				);
 			}
 			return Promise.all([
 				Promise.resolve(result.id),
-				db('registers')
-					.where({ student_id: result.id })
-					.select()
+				selectByStudentId({ studentId: result.id })
 			]);
 		})
 		.then(([studentId, result]) => {
 			if (result == null || result.length === 0) {
 				return Promise.reject(
-					new NotFoundError(`registers with the given student email: ${email}`)
+					new NotFoundError(`register (student email: ${studentEmail})`)
 				);
 			}
 			return Promise.all([
 				Promise.resolve(result),
-				db('registers')
-					.where({ student_id: studentId })
-					.del()
+				deleteByStudent({ studentId })
 			]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(`deleting registers of student email: ${email}`, error)
-			);
-		});
+		.catch(error =>
+			handle(error, `deleting registers (student email: ${studentEmail})`)
+		);
 
 const deleteByClass = ({ classId }) =>
-	db('classes')
-		.where({ id: classId })
-		.first()
+	classes
+		.getById({ id: classId })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`class with the given id: ${classId}`)
-				);
+				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
 			return db('registers')
 				.where({ class_id: classId })
@@ -709,7 +536,7 @@ const deleteByClass = ({ classId }) =>
 		.then(result => {
 			if (result == null || result.length === 0) {
 				return Promise.reject(
-					new NotFoundError(`registers with the given class id: ${classId}`)
+					new NotFoundError(`register (class id: ${classId})`)
 				);
 			}
 			return Promise.all([
@@ -719,19 +546,12 @@ const deleteByClass = ({ classId }) =>
 					.del()
 			]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(`deleting registers of class id: ${classId}`, error)
-			);
-		});
+		.catch(error => handle(error, `deleting registers (class id: ${classId})`));
 
-/* Cross Table Actions */
+/* Auxillary Actions */
 
 // get teachers by student
 // get teachers by class

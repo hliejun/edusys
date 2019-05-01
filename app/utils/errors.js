@@ -1,3 +1,22 @@
+const ERROR_TYPES = {
+	ER_DECRYPTION: 'ER_DECRYPTION',
+	ER_ENCRYPTION: 'ER_ENCRYPTION',
+	ER_GEN_UNKNOWN: 'ER_GEN_UNKNOWN',
+	ER_IDEN_OBJECT: 'ER_IDEN_OBJECT',
+	ER_MAL_RESPONSE: 'ER_MAL_RESPONSE',
+	ER_NOT_FOUND: 'ER_NOT_FOUND',
+	ER_UNIQ_CONSTRAINT: 'ER_UNIQ_CONSTRAINT'
+};
+
+const isHandled = error => error && !!ERROR_TYPES[error.code];
+
+const handle = (error, description) => {
+	if (isHandled(error)) {
+		return Promise.reject(error);
+	}
+	return Promise.reject(new UnknownError(description, error));
+};
+
 /**
  * 'Unknown' generic error
  */
@@ -14,7 +33,7 @@ class UnknownError extends Error {
 		if (error && error.message) {
 			this.message += `\n Details: ${error.message}`;
 		}
-		this.code = 'ER_GEN_UNKNOWN';
+		this.code = ERROR_TYPES.ER_GEN_UNKNOWN;
 		Error.captureStackTrace(this, UnknownError);
 	}
 }
@@ -29,7 +48,7 @@ class NotFoundError extends Error {
 	 */
 	constructor(object) {
 		super(`The ${object || 'object'} does not exist.`);
-		this.code = 'ER_NOT_FOUND';
+		this.code = ERROR_TYPES.ER_NOT_FOUND;
 		Error.captureStackTrace(this, NotFoundError);
 	}
 }
@@ -48,7 +67,7 @@ class IdenticalObjectError extends Error {
 				'object'} provided is identical to the old one. Please use a different ${object ||
 				'object'}.`
 		);
-		this.code = 'ER_IDEN_OBJECT';
+		this.code = ERROR_TYPES.ER_IDEN_OBJECT;
 		Error.captureStackTrace(this, IdenticalObjectError);
 	}
 }
@@ -66,7 +85,7 @@ class MalformedResponseError extends Error {
 		super(
 			`A response with ${response} is expected but received ${actual} instead.`
 		);
-		this.code = 'ER_MAL_RESPONSE';
+		this.code = ERROR_TYPES.ER_MAL_RESPONSE;
 		Error.captureStackTrace(this, MalformedResponseError);
 	}
 }
@@ -84,7 +103,7 @@ class UniqueConstraintError extends Error {
 		super(
 			`The ${constraint} (${value}) already exists. Please use a different and unique ${constraint}.`
 		);
-		this.code = 'ER_UNIQ_CONSTRAINT';
+		this.code = ERROR_TYPES.ER_UNIQ_CONSTRAINT;
 		Error.captureStackTrace(this, UniqueConstraintError);
 	}
 }
@@ -99,7 +118,7 @@ class EncryptionError extends Error {
 	 */
 	constructor(data) {
 		super(`An error occurred while encrypting the ${data}.`);
-		this.code = 'ER_ENCRYPTION';
+		this.code = ERROR_TYPES.ER_ENCRYPTION;
 		Error.captureStackTrace(this, EncryptionError);
 	}
 }
@@ -114,7 +133,7 @@ class DecryptionError extends Error {
 	 */
 	constructor(data) {
 		super(`An error occurred while decrypting the ${data}.`);
-		this.code = 'ER_DECRYPTION';
+		this.code = ERROR_TYPES.ER_DECRYPTION;
 		Error.captureStackTrace(this, DecryptionError);
 	}
 }
@@ -126,5 +145,6 @@ module.exports = {
 	MalformedResponseError,
 	UniqueConstraintError,
 	EncryptionError,
-	DecryptionError
+	DecryptionError,
+	handle
 };

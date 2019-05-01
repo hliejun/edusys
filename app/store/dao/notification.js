@@ -4,11 +4,11 @@ const config = require('../../../knexfile');
 
 const {
 	MalformedResponseError,
-	UnknownError,
-	NotFoundError
+	NotFoundError,
+	handle
 } = require('../../utils/errors');
 
-// TODO: Validation of inputs to be done in actions level using express-validator
+const teachers = require('./teacher');
 
 const db = knex(config);
 
@@ -16,8 +16,6 @@ const PRECISION_TIMESTAMP = 6;
 
 /* Creators */
 
-// TODO: Validate title
-// TODO: Validate content
 const create = ({ teacherId, title, content }) =>
 	db('notifications')
 		.insert({
@@ -30,42 +28,42 @@ const create = ({ teacherId, title, content }) =>
 				return Promise.resolve(ids[0]);
 			} else {
 				return Promise.reject(
-					new MalformedResponseError('id of the created notification row', ids)
+					new MalformedResponseError('id of notification created', ids)
 				);
 			}
-		})
-		.catch(error => {
-			if (error.code === 'ER_MAL_RESPONSE') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(new UnknownError('creating a notification', error));
 		});
 
 const createBySenderId = ({ teacherId, title, content }) =>
-	db('teachers')
-		.where({ id: teacherId })
-		.first()
+	teachers
+		.getById({ id: teacherId })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`teacher with the given id: ${teacherId}`)
-				);
+				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
 			return create({ teacherId, title, content });
-		});
+		})
+		.catch(error =>
+			handle(
+				error,
+				`creating notification (teacher id: ${teacherId}, title: ${title}, content: ${content})`
+			)
+		);
 
 const createBySenderEmail = ({ email, title, content }) =>
-	db('teachers')
-		.where({ email })
-		.first()
+	teachers
+		.getByEmail({ email })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`teacher with the given email: ${email}`)
-				);
+				return Promise.reject(new NotFoundError(`teacher (email: ${email})`));
 			}
 			return create({ teacherId: result.id, title, content });
-		});
+		})
+		.catch(error =>
+			handle(
+				error,
+				`creating notification (email: ${email}, title: ${title}, content: ${content})`
+			)
+		);
 
 /* Readers */
 
@@ -73,157 +71,100 @@ const getById = ({ id }) =>
 	db('notifications')
 		.where({ id })
 		.first()
-		.catch(error => {
-			return Promise.reject(
-				new UnknownError(`finding a notification with id: ${id}`, error)
-			);
-		});
+		.catch(error => handle(error, `finding notification (id: ${id})`));
+
+// TODO: Add bulk read (using transactions)
 
 /* Updaters */
 
-const setSenderById = ({ id, teacherId }) =>
+const setTeacherId = ({ id, teacherId }) =>
 	db('notifications')
 		.where({ id })
-		.first()
-		.then(result => {
-			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`notification with the given id: ${id}`)
-				);
-			}
-			return db('teachers')
-				.where({ id: teacherId })
-				.first();
-		})
-		.then(result => {
-			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`teacher with the given id: ${teacherId}`)
-				);
-			}
-			return db('notifications')
-				.where({ id })
-				.update({
-					teacher_id: result.id,
-					updated_at: db.fn.now(PRECISION_TIMESTAMP)
-				});
-		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a notification of id: ${id} with sender (teacher_id): ${teacherId}`,
-					error
-				)
-			);
+		.update({
+			teacher_id: teacherId,
+			updated_at: db.fn.now(PRECISION_TIMESTAMP)
 		});
+
+const setSenderById = ({ id, teacherId }) =>
+	getById({ id })
+		.then(result => {
+			if (result == null) {
+				return Promise.reject(new NotFoundError(`notification (id: ${id})`));
+			}
+			return teachers.getById({ id: teacherId });
+		})
+		.then(result => {
+			if (result == null) {
+				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
+			}
+			return setTeacherId({ id, teacherId });
+		})
+		.catch(error =>
+			handle(
+				error,
+				`updating sender of notification (id: ${id}) to teacher (id: ${teacherId})`
+			)
+		);
 
 const setSenderByEmail = ({ id, email }) =>
-	db('notifications')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`notification with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`notification (id: ${id})`));
 			}
-			return db('teachers')
-				.where({ email })
-				.first();
+			return teachers.getByEmail({ email });
 		})
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`teacher with the given email: ${email}`)
-				);
+				return Promise.reject(new NotFoundError(`teacher (email: ${email})`));
 			}
-			return db('notifications')
-				.where({ id })
-				.update({
-					teacher_id: result.id,
-					updated_at: db.fn.now(PRECISION_TIMESTAMP)
-				});
+			return setTeacherId({ id, teacherId: result.id });
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a notification of id: ${id} with sender (email): ${email}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(
+				error,
+				`updating sender of notification (id: ${id}) to teacher (email: ${email})`
+			)
+		);
 
-// TODO: Validate title
 const setTitle = ({ id, title }) =>
-	db('notifications')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`notification with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`notification (id: ${id})`));
 			}
 			return db('notifications')
 				.where({ id })
 				.update({ title, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a notification of id: ${id} with title: ${title}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(error, `updating title of notification (id: ${id}) to ${title}`)
+		);
 
-// TODO: Validate content
 const setContent = ({ id, content }) =>
-	db('notifications')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`notification with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`notification (id: ${id})`));
 			}
 			return db('notifications')
 				.where({ id })
 				.update({ content, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`updating a notification of id: ${id} with content: ${content}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(
+				error,
+				`updating content of notification (id: ${id}) to ${content}`
+			)
+		);
 
 /* Deletors */
 
 const deleteById = ({ id }) =>
-	db('notifications')
-		.where({ id })
-		.first()
+	getById({ id })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`notification with the given id: ${id}`)
-				);
+				return Promise.reject(new NotFoundError(`notification (id: ${id})`));
 			}
 			return Promise.all([
 				Promise.resolve(result),
@@ -232,108 +173,79 @@ const deleteById = ({ id }) =>
 					.del()
 			]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(`deleting a notification of id: ${id}`, error)
-			);
-		});
+		.catch(error => handle(error, `deleting notification (id: ${id})`));
+
+// TODO: Use transactions for bulk delete
+
+const selectByTeacher = ({ teacherId }) =>
+	db('notifications')
+		.where({ teacher_id: teacherId })
+		.select();
+
+const deleteByTeacher = ({ teacherId }) =>
+	db('notifications')
+		.where({ teacher_id: teacherId })
+		.del();
 
 const deleteBySenderId = ({ teacherId }) =>
-	db('teachers')
-		.where({ id: teacherId })
-		.first()
+	teachers
+		.getById({ id: teacherId })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`teacher with the given id: ${teacherId}`)
-				);
+				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
-			return db('notifications')
-				.where({ teacher_id: teacherId })
-				.select();
+			return selectByTeacher({ teacherId });
 		})
 		.then(result => {
 			if (result == null || result.length === 0) {
 				return Promise.reject(
-					new NotFoundError(
-						`notifications with the given sender (teacher_id): ${teacherId}`
-					)
+					new NotFoundError(`notification (sender id: ${teacherId})`)
 				);
 			}
 			return Promise.all([
 				Promise.resolve(result),
-				db('notifications')
-					.where({ teacher_id: teacherId })
-					.del()
+				deleteByTeacher({ teacherId })
 			]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`deleting notifications of sender (teacher_id): ${teacherId}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(error, `deleting notifications (sender id: ${teacherId})`)
+		);
 
 const deleteBySenderEmail = ({ email }) =>
-	db('teachers')
-		.where({ email })
-		.first()
+	teachers
+		.getByEmail({ email })
 		.then(result => {
 			if (result == null) {
-				return Promise.reject(
-					new NotFoundError(`teacher with the given email: ${email}`)
-				);
+				return Promise.reject(new NotFoundError(`teacher (email: ${email})`));
 			}
 			return Promise.all([
 				Promise.resolve(result.id),
-				db('notifications')
-					.where({ teacher_id: result.id })
-					.select()
+				selectByTeacher({ teacherId: result.id })
 			]);
 		})
 		.then(([teacherId, result]) => {
 			if (result == null || result.length === 0) {
 				return Promise.reject(
-					new NotFoundError(
-						`notifications with the given sender (email): ${email}`
-					)
+					new NotFoundError(`notification (sender email: ${email})`)
 				);
 			}
 			return Promise.all([
 				Promise.resolve(result),
-				db('notifications')
-					.where({ teacher_id: teacherId })
-					.del()
+				deleteByTeacher({ teacherId })
 			]);
 		})
-		.then(([result, removal]) => {
+		.then(([result]) => {
 			return Promise.resolve(result);
 		})
-		.catch(error => {
-			if (error.code === 'ER_NOT_FOUND') {
-				return Promise.reject(error);
-			}
-			return Promise.reject(
-				new UnknownError(
-					`deleting notifications of sender (email): ${email}`,
-					error
-				)
-			);
-		});
+		.catch(error =>
+			handle(error, `deleting notifications (sender email: ${email})`)
+		);
 
 module.exports = {
 	createBySenderId,
