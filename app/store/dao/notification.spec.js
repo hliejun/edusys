@@ -5,8 +5,7 @@ const config = require('../../../knexfile');
 
 const notificationDAO = require('./notification');
 
-// TODO: Use teacher DAO to handle teacher objects
-// const teacherDAO = require('./teacher');
+const teacherDAO = require('./teacher');
 
 chai.use(require('chai-datetime'));
 
@@ -53,9 +52,9 @@ describe('Data Access Object: Notification', function() {
 	});
 
 	context('createBySenderId', function() {
-		it('should create a row with returning values', function() {
-			return db('teachers')
-				.insert(john)
+		it('should create a notification, returning values', function() {
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -87,8 +86,8 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should create another row even if parameters are repeated', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -138,8 +137,8 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should NOT create a row if teacher of corresponding teacher_id does not exist', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 2,
@@ -164,8 +163,8 @@ describe('Data Access Object: Notification', function() {
 
 	context('createBySenderEmail', function() {
 		it('should create a row with returning values', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderEmail({
 						email: john.email,
@@ -197,8 +196,8 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should create another row even if parameters are repeated', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderEmail({
 						email: john.email,
@@ -248,8 +247,8 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should NOT create a row if teacher of corresponding email does not exist', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderEmail({
 						email: jane.email,
@@ -277,8 +276,8 @@ describe('Data Access Object: Notification', function() {
 
 	context('getById', function() {
 		it('should read and return the row corresponding to given id', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -301,8 +300,8 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should read and return "undefined" if given a row id that does not exist', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -320,10 +319,10 @@ describe('Data Access Object: Notification', function() {
 
 	context('setSenderById', function() {
 		it('should update teacher_id field with provided value and return id', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
-					return db('teachers').insert(jane);
+					return teacherDAO.create(jane);
 				})
 				.then(function() {
 					return notificationDAO.createBySenderId({
@@ -354,9 +353,11 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should NOT update teacher_id field if provided notification id does not exist', function() {
-			return db('teachers')
-				.insert(john)
-				.insert(jane)
+			return teacherDAO
+				.create(john)
+				.then(function() {
+					return teacherDAO.create(jane);
+				})
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -374,8 +375,8 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should NOT update teacher_id field if provided teacher id does not exist', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -395,10 +396,10 @@ describe('Data Access Object: Notification', function() {
 
 	context('setSenderByEmail', function() {
 		it('should update teacher_id field with referenced value by email and return id', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
-					return db('teachers').insert(jane);
+					return teacherDAO.create(jane);
 				})
 				.then(function() {
 					return notificationDAO.createBySenderId({
@@ -429,9 +430,11 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should NOT update teacher_id field if provided notification id does not exist', function() {
-			return db('teachers')
-				.insert(john)
-				.insert(jane)
+			return teacherDAO
+				.create(john)
+				.then(function() {
+					return teacherDAO.create(jane);
+				})
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -449,8 +452,8 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should NOT update teacher_id field if provided teacher email does not exist', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -473,8 +476,8 @@ describe('Data Access Object: Notification', function() {
 
 	context('setTitle', function() {
 		it('should update title field with value and return id', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -507,8 +510,8 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should NOT update title field if provided notification id does not exist', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -535,8 +538,8 @@ describe('Data Access Object: Notification', function() {
 
 	context('setContent', function() {
 		it('should update content field with value and return id', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -569,8 +572,8 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should NOT update content field if provided notification id does not exist', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -597,8 +600,8 @@ describe('Data Access Object: Notification', function() {
 
 	context('deleteById', function() {
 		it('should delete a row corresponding to provided id with returning values', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -624,8 +627,8 @@ describe('Data Access Object: Notification', function() {
 				});
 		});
 		it('should NOT delete a row if provided id does not exist', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -645,10 +648,10 @@ describe('Data Access Object: Notification', function() {
 
 	context('deleteBySenderId', function() {
 		it('should delete matching rows corresponding to provided sender (teacher_id) with returning values', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
-					return db('teachers').insert(jane);
+					return teacherDAO.create(jane);
 				})
 				.then(function() {
 					return notificationDAO.createBySenderId({
@@ -711,8 +714,8 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should NOT delete any rows if sender (teacher_id) does not exist', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -735,11 +738,11 @@ describe('Data Access Object: Notification', function() {
 				});
 		});
 
-		it('should NOT delete any rows if notifications created by sender (teacher_id) do not exist', function() {
-			return db('teachers')
-				.insert(john)
+		it('should NOT delete any rows, returning empty array if notifications created by sender (teacher_id) do not exist', function() {
+			return teacherDAO
+				.create(john)
 				.then(function() {
-					return db('teachers').insert(jane);
+					return teacherDAO.create(jane);
 				})
 				.then(function() {
 					return notificationDAO.createBySenderId({
@@ -756,20 +759,20 @@ describe('Data Access Object: Notification', function() {
 				.then(function() {
 					return notificationDAO.deleteBySenderId({ teacherId: 1 });
 				})
-				.catch(function(error) {
-					expect(function() {
-						throw error;
-					}).to.throw(Error, 'The notification (sender id: 1) does not exist.');
+				.then(function(notifications) {
+					expect(notifications)
+						.to.be.an('array')
+						.of.length(0);
 				});
 		});
 	});
 
 	context('deleteBySenderEmail', function() {
 		it('should delete matching rows corresponding to provided sender (email) with returning values', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
-					return db('teachers').insert(jane);
+					return teacherDAO.create(jane);
 				})
 				.then(function() {
 					return notificationDAO.createBySenderId({
@@ -832,8 +835,8 @@ describe('Data Access Object: Notification', function() {
 		});
 
 		it('should NOT delete any rows if sender (email) does not exist', function() {
-			return db('teachers')
-				.insert(john)
+			return teacherDAO
+				.create(john)
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
@@ -859,11 +862,11 @@ describe('Data Access Object: Notification', function() {
 				});
 		});
 
-		it('should NOT delete any rows if notifications created by sender (email) do not exist', function() {
-			return db('teachers')
-				.insert(john)
+		it('should NOT delete any rows, returning empty array if notifications created by sender (email) do not exist', function() {
+			return teacherDAO
+				.create(john)
 				.then(function() {
-					return db('teachers').insert(jane);
+					return teacherDAO.create(jane);
 				})
 				.then(function() {
 					return notificationDAO.createBySenderId({
@@ -880,13 +883,10 @@ describe('Data Access Object: Notification', function() {
 				.then(function() {
 					return notificationDAO.deleteBySenderEmail({ email: john.email });
 				})
-				.catch(function(error) {
-					expect(function() {
-						throw error;
-					}).to.throw(
-						Error,
-						`The notification (sender email: ${john.email}) does not exist.`
-					);
+				.then(function(notifications) {
+					expect(notifications)
+						.to.be.an('array')
+						.of.length(0);
 				});
 		});
 	});

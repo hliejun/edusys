@@ -189,7 +189,6 @@ const deleteByTeacher = ({ teacherId }) =>
 		.where({ teacher_id: teacherId })
 		.del();
 
-// TODO: Don't error out if no matches found
 const deleteBySenderId = ({ teacherId }) =>
 	teachers
 		.getById({ id: teacherId })
@@ -199,17 +198,14 @@ const deleteBySenderId = ({ teacherId }) =>
 			}
 			return selectByTeacher({ teacherId });
 		})
-		.then(result => {
-			if (result == null || result.length === 0) {
-				return Promise.reject(
-					new NotFoundError(`notification (sender id: ${teacherId})`)
-				);
-			}
-			return Promise.all([
-				Promise.resolve(result),
-				deleteByTeacher({ teacherId })
-			]);
-		})
+		.then(result =>
+			Promise.all([
+				Promise.resolve(result || []),
+				result == null || result.length === 0
+					? Promise.resolve(false)
+					: deleteByTeacher({ teacherId })
+			])
+		)
 		.then(([result]) => {
 			return Promise.resolve(result);
 		})
@@ -217,7 +213,6 @@ const deleteBySenderId = ({ teacherId }) =>
 			handle(error, `deleting notifications (sender id: ${teacherId})`)
 		);
 
-// TODO: Don't error out if no matches found
 const deleteBySenderEmail = ({ email }) =>
 	teachers
 		.getByEmail({ email })
@@ -230,17 +225,14 @@ const deleteBySenderEmail = ({ email }) =>
 				selectByTeacher({ teacherId: result.id })
 			]);
 		})
-		.then(([teacherId, result]) => {
-			if (result == null || result.length === 0) {
-				return Promise.reject(
-					new NotFoundError(`notification (sender email: ${email})`)
-				);
-			}
-			return Promise.all([
-				Promise.resolve(result),
-				deleteByTeacher({ teacherId })
-			]);
-		})
+		.then(([teacherId, result]) =>
+			Promise.all([
+				Promise.resolve(result || []),
+				result == null || result.length === 0
+					? Promise.resolve(false)
+					: deleteByTeacher({ teacherId })
+			])
+		)
 		.then(([result]) => {
 			return Promise.resolve(result);
 		})
