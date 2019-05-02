@@ -118,6 +118,95 @@ describe('Data Access Object: Teacher', function() {
 		});
 	});
 
+	context('bulkCreate', function() {
+		beforeEach(function() {
+			return teacherDAO.create(JANE);
+		});
+
+		it('should create teachers, returning an array of attributes', function() {
+			return teacherDAO
+				.bulkCreate([BOB, JOHN])
+				.then(function(teacherIds) {
+					expect(teacherIds)
+						.to.be.an('array')
+						.of.length(2);
+					expect(teacherIds).to.have.members([2, 3]);
+					return teacherDAO.getByIds(teacherIds);
+				})
+				.then(function(teachers) {
+					expect(teachers)
+						.to.be.an('array')
+						.of.length(2);
+					teachers.forEach(function(teacher, index) {
+						switch (teacher.email) {
+						case BOB.email:
+							expect(teacher)
+								.to.be.an('object')
+								.that.includes({
+									id: index + 2,
+									name: BOB.name,
+									email: BOB.email
+								});
+							break;
+						case JOHN.email:
+							expect(teacher)
+								.to.be.an('object')
+								.that.includes({
+									id: index + 2,
+									name: JOHN.name,
+									email: JOHN.email
+								});
+							break;
+						default:
+							assert.fail('Unexpected teacher email after bulk creation.');
+						}
+					});
+				});
+		});
+
+		it('should NOT create any teacher if one or more has email identical to an existing teacher', function() {
+			return teacherDAO
+				.bulkCreate([BOB, JOHN, JANE])
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(
+						Error,
+						`The email (${
+							JANE.email
+						}) already exists. Please use a different and unique email.`
+					);
+					return teacherDAO.getByIds([2, 3, 4]);
+				})
+				.then(function(teachers) {
+					expect(teachers)
+						.to.be.an('array')
+						.of.length(0);
+				});
+		});
+
+		it('should NOT create any teacher if two or more has email identical to each other', function() {
+			return teacherDAO
+				.bulkCreate([ALICE, BOB, JOHN])
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(
+						Error,
+						`The email (${
+							JOHN.email
+						}) already exists. Please use a different and unique email.`
+					);
+					return teacherDAO.getByIds([2, 3, 4]);
+				})
+				.then(function(teachers) {
+					expect(teachers)
+						.to.be.an('array')
+						.of.length(0);
+				});
+		});
+	});
+
 	context('getById', function() {
 		beforeEach(function() {
 			return teacherDAO.create(JOHN);
@@ -143,6 +232,52 @@ describe('Data Access Object: Teacher', function() {
 		it('should return "undefined" if teacher with matching id does not exist', function() {
 			return teacherDAO.getById({ id: 2 }).then(function(result) {
 				expect(result).to.be.an('undefined');
+			});
+		});
+	});
+
+	context('getByIds', function() {
+		beforeEach(function() {
+			return teacherDAO.bulkCreate([JOHN, JANE]);
+		});
+
+		it('should read teacher with matching ids, returning array of attributes', function() {
+			return teacherDAO.getByIds([1, 2, 3]).then(function(teachers) {
+				expect(teachers)
+					.to.be.an('array')
+					.of.length(2);
+				teachers.forEach(function(teacher, index) {
+					switch (teacher.email) {
+					case JANE.email:
+						expect(teacher)
+							.to.be.an('object')
+							.that.includes({
+								id: index + 1,
+								name: JANE.name,
+								email: JANE.email
+							});
+						break;
+					case JOHN.email:
+						expect(teacher)
+							.to.be.an('object')
+							.that.includes({
+								id: index + 1,
+								name: JOHN.name,
+								email: JOHN.email
+							});
+						break;
+					default:
+						assert.fail('Unexpected teacher email when getting from ids.');
+					}
+				});
+			});
+		});
+
+		it('should return an empty array if teacher with matching id does not exist', function() {
+			return teacherDAO.getByIds([4, 5]).then(function(teachers) {
+				expect(teachers)
+					.to.be.an('array')
+					.of.length(0);
 			});
 		});
 	});
@@ -175,6 +310,52 @@ describe('Data Access Object: Teacher', function() {
 				.then(function(teacher) {
 					expect(teacher).to.be.an('undefined');
 				});
+		});
+	});
+
+	context('getByEmails', function() {
+		beforeEach(function() {
+			return teacherDAO.bulkCreate([JOHN, JANE]);
+		});
+
+		it('should read teacher with matching emails, returning array of attributes', function() {
+			return teacherDAO
+				.getByEmails([JANE.email, JOHN.email, BOB.email])
+				.then(function(teachers) {
+					expect(teachers)
+						.to.be.an('array')
+						.of.length(2);
+					teachers.forEach(function(teacher) {
+						switch (teacher.email) {
+						case JANE.email:
+							expect(teacher)
+								.to.be.an('object')
+								.that.includes({
+									name: JANE.name,
+									email: JANE.email
+								});
+							break;
+						case JOHN.email:
+							expect(teacher)
+								.to.be.an('object')
+								.that.includes({
+									name: JOHN.name,
+									email: JOHN.email
+								});
+							break;
+						default:
+							assert.fail('Unexpected teacher email when getting from ids.');
+						}
+					});
+				});
+		});
+
+		it('should return an empty array if teacher with matching email does not exist', function() {
+			return teacherDAO.getByEmails([BOB.email]).then(function(teachers) {
+				expect(teachers)
+					.to.be.an('array')
+					.of.length(0);
+			});
 		});
 	});
 
@@ -410,6 +591,8 @@ describe('Data Access Object: Teacher', function() {
 				});
 		});
 	});
+
+	// FIXME: Add test for bulk delete
 
 	context('validate', function() {
 		beforeEach(function() {

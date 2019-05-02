@@ -42,7 +42,41 @@ const create = ({ name, email, password }) =>
 			return handle(error, `creating teacher (name: ${name}, email: ${email})`);
 		});
 
-// TODO: Add bulk create (using transactions)
+const bulkCreate = teachers =>
+	db.transaction(transaction => {
+		const creations = teachers.map(teacher =>
+			encryptPassword(teacher.password)
+				.then(hash =>
+					transaction
+						.insert({
+							name: teacher.name,
+							email: teacher.email,
+							password: hash
+						})
+						.into('teachers')
+				)
+				.then(ids => {
+					if (ids && ids.length === 1) {
+						return Promise.resolve(ids[0]);
+					}
+					return Promise.reject(
+						new MalformedResponseError('id of teacher created', ids)
+					);
+				})
+				.catch(error => {
+					if (error.code === 'ER_DUP_ENTRY') {
+						return Promise.reject(
+							new UniqueConstraintError('email', teacher.email)
+						);
+					}
+					return handle(
+						error,
+						`creating teacher (name: ${teacher.name}, email: ${teacher.email})`
+					);
+				})
+		);
+		return Promise.all(creations);
+	});
 
 /* Readers */
 
@@ -52,13 +86,23 @@ const getById = ({ id }) =>
 		.first()
 		.catch(error => handle(error, `finding teacher (id: ${id})`));
 
+const getByIds = ids =>
+	db('teachers')
+		.whereIn('id', ids)
+		.select()
+		.catch(error => handle(error, `finding teachers (ids: ${ids})`));
+
 const getByEmail = ({ email }) =>
 	db('teachers')
 		.where({ email })
 		.first()
 		.catch(error => handle(error, `finding teacher (email: ${email})`));
 
-// TODO: Add bulk read (using transactions)
+const getByEmails = emails =>
+	db('teachers')
+		.whereIn('email', emails)
+		.select()
+		.catch(error => handle(error, `finding teachers (emails: ${emails})`));
 
 /* Updaters */
 
@@ -150,7 +194,7 @@ const deleteByEmail = ({ email }) =>
 		})
 		.catch(error => handle(error, `deleting teacher (email: ${email})`));
 
-// TODO: Add bulk delete (using transactions)
+// FIXME: Add bulk delete by emails (using transactions)
 
 /* Auxillary Actions */
 
@@ -168,8 +212,11 @@ const validate = ({ email, password }) =>
 
 module.exports = {
 	create,
+	bulkCreate,
 	getById,
+	getByIds,
 	getByEmail,
+	getByEmails,
 	setName,
 	setEmail,
 	setPassword,
