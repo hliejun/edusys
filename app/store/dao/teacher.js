@@ -2,6 +2,8 @@ const knex = require('knex');
 
 const config = require('../../../knexfile');
 
+const { PRECISION_TIMESTAMP } = require('../../constants');
+
 const {
 	MalformedResponseError,
 	UniqueConstraintError,
@@ -13,10 +15,6 @@ const {
 const { encryptPassword, comparePassword } = require('../../utils/crypto');
 
 const db = knex(config);
-
-const PRECISION_TIMESTAMP = 6;
-
-// TODO: Handle encryption/decryption errors
 
 /* Creators */
 

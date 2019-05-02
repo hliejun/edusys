@@ -3,8 +3,11 @@ const chai = require('chai');
 const knex = require('knex');
 
 const config = require('../../../knexfile');
-
 const teacherDAO = require('./teacher');
+
+const { TEACHERS } = require('../../constants');
+
+const { ALICE, BOB, JOHN, JANE } = TEACHERS;
 
 chai.use(require('chai-datetime'));
 
@@ -13,38 +16,16 @@ const expect = chai.expect;
 
 const db = knex(config);
 
-const john = {
-	name: 'John Doe',
-	email: 'john@email.com',
-	password: 'P455w0rd'
-};
-
-const jane = {
-	name: 'Jane Doe',
-	email: 'jane@email.com',
-	password: 'P455w0rd'
-};
-
-const alice = {
-	name: 'Alice',
-	email: 'john@email.com',
-	password: 'P455w0rd'
-};
-
-const bob = {
-	name: 'Bob',
-	email: 'bob@email.com',
-	password: 'P@ssword123'
-};
-
-// TODO: Shift commented validation tests to actions
-
 describe('Data Access Object: Teacher', function() {
 	beforeEach(function() {
 		return db.migrate
 			.rollback()
-			.then(() => db.migrate.latest())
-			.then(() => db.seed.run());
+			.then(function() {
+				return db.migrate.latest();
+			})
+			.then(function() {
+				return db.seed.run();
+			});
 	});
 
 	afterEach(function() {
@@ -52,9 +33,9 @@ describe('Data Access Object: Teacher', function() {
 	});
 
 	context('create', function() {
-		it('should create a row with returning values', function() {
+		it('should create a teacher, returning attributes', function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
@@ -63,33 +44,33 @@ describe('Data Access Object: Teacher', function() {
 						.where({ id })
 						.first();
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(teacher) {
+					expect(teacher)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: john.name,
-							email: john.email
+							name: JOHN.name,
+							email: JOHN.email
 						});
-					expect(result['created_at'])
+					expect(teacher['created_at'])
 						.to.be.a('date')
-						.that.equalDate(result['updated_at'])
-						.and.equalTime(result['updated_at']);
-					return bcrypt.compare(john.password, result.password);
+						.that.equalDate(teacher['updated_at'])
+						.and.equalTime(teacher['updated_at']);
+					return bcrypt.compare(JOHN.password, teacher.password);
 				})
 				.then(function(isMatchingPassword) {
 					assert.isTrue(isMatchingPassword);
 				});
 		});
 
-		it('should create another row if email is unique', function() {
+		it('should create another teacher if email is unique', function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
 						.that.equals(1);
-					return teacherDAO.create(jane);
+					return teacherDAO.create(JANE);
 				})
 				.then(function(id) {
 					expect(id)
@@ -99,30 +80,30 @@ describe('Data Access Object: Teacher', function() {
 						.where({ id })
 						.first();
 				})
-				.then(function(result) {
-					assert.notEqual(john.email, jane.email);
-					expect(result)
+				.then(function(teacher) {
+					assert.notEqual(JOHN.email, JANE.email);
+					expect(teacher)
 						.to.be.an('object')
 						.that.includes({
 							id: 2,
-							name: jane.name,
-							email: jane.email
+							name: JANE.name,
+							email: JANE.email
 						});
-					expect(result['created_at'])
+					expect(teacher['created_at'])
 						.to.be.a('date')
-						.that.equalDate(result['updated_at']);
-					return bcrypt.compare(john.password, result.password);
+						.that.equalDate(teacher['updated_at']);
+					return bcrypt.compare(JOHN.password, teacher.password);
 				})
 				.then(function(isMatchingPassword) {
 					assert.isTrue(isMatchingPassword);
 				});
 		});
 
-		it('should NOT create a row if email is non-unique', function() {
+		it('should NOT create a teacher if email is identical', function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return teacherDAO.create(alice);
+					return teacherDAO.create(ALICE);
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -130,127 +111,105 @@ describe('Data Access Object: Teacher', function() {
 					}).to.throw(
 						Error,
 						`The email (${
-							john.email
+							JOHN.email
 						}) already exists. Please use a different and unique email.`
 					);
 				});
 		});
-
-		// it('should NOT create a row if name is invalid', function() {
-		// 	// TODO: Validation test...
-		// });
-
-		// it('should NOT create a row if email is invalid', function() {
-		// 	// TODO: Validation test...
-		// });
-
-		// it('should NOT create a row if password does not match standard', function() {
-		// 	// TODO: Validation test...
-		// });
 	});
 
 	context('getById', function() {
-		it('should read and return the row corresponding to given id', function() {
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should read teacher with matching id, returning attributes', function() {
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.create(jane);
-				})
+				.create(JANE)
 				.then(function() {
 					return teacherDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(teacher) {
+					expect(teacher)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: john.name,
-							email: john.email
+							name: JOHN.name,
+							email: JOHN.email
 						});
 				});
 		});
 
-		it('should read and return "undefined" if given a row id that does not exist', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.getById({ id: 2 });
-				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
-				});
+		it('should return "undefined" if teacher with matching id does not exist', function() {
+			return teacherDAO.getById({ id: 2 }).then(function(result) {
+				expect(result).to.be.an('undefined');
+			});
 		});
 	});
 
 	context('getByEmail', function() {
-		it('should read and return the row corresponding to given email', function() {
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should read teacher with matching email, returning attributes', function() {
 			return teacherDAO
-				.create(john)
+				.create(JANE)
 				.then(function() {
-					return teacherDAO.create(jane);
+					return teacherDAO.getByEmail({ email: JANE.email });
 				})
-				.then(function() {
-					return teacherDAO.getByEmail({ email: jane.email });
-				})
-				.then(function(result) {
-					expect(result)
+				.then(function(teacher) {
+					expect(teacher)
 						.to.be.an('object')
 						.that.includes({
 							id: 2,
-							name: jane.name,
-							email: jane.email
+							name: JANE.name,
+							email: JANE.email
 						});
 				});
 		});
 
-		it('should read and return "undefined" if given an email that does not exist', function() {
+		it('should return "undefined" if teacher with matching email does not exist', function() {
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.getByEmail({ email: bob.email });
-				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
+				.getByEmail({ email: BOB.email })
+				.then(function(teacher) {
+					expect(teacher).to.be.an('undefined');
 				});
 		});
 	});
 
 	context('setName', function() {
-		it('should update name field with provided value and return id', function() {
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should update name of teacher, returning id', function() {
+			const name = 'Jonathan Doe';
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.setName({
-						id: 1,
-						name: 'Jonathan Doe'
-					});
-				})
+				.setName({ id: 1, name })
 				.then(function(id) {
 					expect(id).to.equal(1);
 					return teacherDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(teacher) {
+					expect(teacher)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: 'Jonathan Doe',
-							email: john.email
+							name,
+							email: JOHN.email
 						});
-					expect(result['updated_at'])
+					expect(teacher['updated_at'])
 						.to.be.a('date')
-						.that.afterTime(result['created_at']);
+						.that.afterTime(teacher['created_at']);
 				});
 		});
 
-		it('should NOT update name field if provided id does not exist', function() {
+		it('should NOT update if teacher does not exist', function() {
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.setName({
-						id: 2,
-						name: 'Jonathan Doe'
-					});
+				.setName({
+					id: 2,
+					name: 'Jonathan Doe'
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -258,48 +217,40 @@ describe('Data Access Object: Teacher', function() {
 					}).to.throw(Error, 'The teacher (id: 2) does not exist.');
 				});
 		});
-
-		// it('should NOT update name field if provided name is invalid', function() {
-		// 	// TODO: Validation test...
-		// });
 	});
 
 	context('setEmail', function() {
-		it('should update email field with provided value and return id', function() {
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should update email of teacher, returning id', function() {
+			const email = 'jonathan@email.com';
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.setEmail({
-						id: 1,
-						email: 'jonathan@email.com'
-					});
-				})
+				.setEmail({ id: 1, email })
 				.then(function(id) {
 					expect(id).to.equal(1);
 					return teacherDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(teacher) {
+					expect(teacher)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: john.name,
-							email: 'jonathan@email.com'
+							name: JOHN.name,
+							email
 						});
-					expect(result['updated_at'])
+					expect(teacher['updated_at'])
 						.to.be.a('date')
-						.that.afterTime(result['created_at']);
+						.that.afterTime(teacher['created_at']);
 				});
 		});
 
-		it('should NOT update email field if provided id does not exist', function() {
+		it('should NOT update if teacher does not exist', function() {
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.setEmail({
-						id: 2,
-						email: 'jonathan@email.com'
-					});
+				.setEmail({
+					id: 2,
+					email: 'jonathan@email.com'
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -308,16 +259,13 @@ describe('Data Access Object: Teacher', function() {
 				});
 		});
 
-		it('should NOT update email field if provided email already exists', function() {
+		it('should NOT update if email is already in use', function() {
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.create(jane);
-				})
+				.create(JANE)
 				.then(function() {
 					return teacherDAO.setEmail({
 						id: 2,
-						email: john.email
+						email: JOHN.email
 					});
 				})
 				.catch(function(error) {
@@ -326,57 +274,49 @@ describe('Data Access Object: Teacher', function() {
 					}).to.throw(
 						Error,
 						`The email (${
-							john.email
+							JOHN.email
 						}) already exists. Please use a different and unique email.`
 					);
 				});
 		});
-
-		// it('should NOT update email field if provided email is invalid', function() {
-		// 	// TODO: Validation test...
-		// });
 	});
 
 	context('setPassword', function() {
-		it('should update password field with provided value and return id', function() {
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should update password of teacher, returning id', function() {
+			const password = 'I<3MOE';
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.setPassword({
-						id: 1,
-						password: 'I<3MOE'
-					});
-				})
+				.setPassword({ id: 1, password })
 				.then(function(id) {
 					expect(id).to.equal(1);
 					return teacherDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(teacher) {
+					expect(teacher)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: john.name,
-							email: john.email
+							name: JOHN.name,
+							email: JOHN.email
 						});
-					expect(result['updated_at'])
+					expect(teacher['updated_at'])
 						.to.be.a('date')
-						.that.afterTime(result['created_at']);
-					return bcrypt.compare('I<3MOE', result.password);
+						.that.afterTime(teacher['created_at']);
+					return bcrypt.compare(password, teacher.password);
 				})
 				.then(function(isMatchingPassword) {
 					assert.isTrue(isMatchingPassword);
 				});
 		});
 
-		it('should NOT update password field if provided id does not exist', function() {
+		it('should NOT update if teacher does not exist', function() {
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.setPassword({
-						id: 2,
-						password: 'I<3MOE'
-					});
+				.setPassword({
+					id: 2,
+					password: 'I<3MOE'
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -385,14 +325,11 @@ describe('Data Access Object: Teacher', function() {
 				});
 		});
 
-		it('should NOT update password field if provided password is the same as the previous', function() {
+		it('should NOT update if password is unchanged', function() {
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.setPassword({
-						id: 1,
-						password: john.password
-					});
+				.setPassword({
+					id: 1,
+					password: JOHN.password
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -403,102 +340,90 @@ describe('Data Access Object: Teacher', function() {
 					);
 				});
 		});
-
-		// it('should NOT update password field if provided password does not match standard', function() {
-		// 	// TODO: Validation test...
-		// });
 	});
 
 	context('deleteById', function() {
-		it('should delete a row corresponding to provided id with returning values', function() {
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should delete teacher with matching id, returning attributes', function() {
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.deleteById({ id: 1 });
-				})
-				.then(function(result) {
-					expect(result)
+				.deleteById({ id: 1 })
+				.then(function(teacher) {
+					expect(teacher)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: john.name,
-							email: john.email
+							name: JOHN.name,
+							email: JOHN.email
 						});
 					return teacherDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
+				.then(function(teacher) {
+					expect(teacher).to.be.an('undefined');
 				});
 		});
 
-		it('should NOT delete a row if provided id does not exist', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.deleteById({ id: 2 });
-				})
-				.catch(function(error) {
-					expect(function() {
-						throw error;
-					}).to.throw(Error, 'The teacher (id: 2) does not exist.');
-				});
+		it('should NOT delete if teacher does not exist', function() {
+			return teacherDAO.deleteById({ id: 2 }).catch(function(error) {
+				expect(function() {
+					throw error;
+				}).to.throw(Error, 'The teacher (id: 2) does not exist.');
+			});
 		});
 	});
 
 	context('deleteByEmail', function() {
-		it('should delete a row corresponding to provided email with returning values', function() {
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should delete teacher with matching email, returning attributes', function() {
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.deleteByEmail({ email: john.email });
-				})
-				.then(function(result) {
-					expect(result)
+				.deleteByEmail({ email: JOHN.email })
+				.then(function(teacher) {
+					expect(teacher)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: john.name,
-							email: john.email
+							name: JOHN.name,
+							email: JOHN.email
 						});
 					return teacherDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
+				.then(function(teacher) {
+					expect(teacher).to.be.an('undefined');
 				});
 		});
 
-		it('should NOT delete a row if provided email does not exist', function() {
+		it('should NOT delete if teacher does not exist', function() {
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.deleteByEmail({ email: bob.email });
-				})
+				.deleteByEmail({ email: BOB.email })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher (email: ${bob.email}) does not exist.`
+						`The teacher (email: ${BOB.email}) does not exist.`
 					);
 				});
 		});
 	});
 
 	context('validate', function() {
-		it('should validate with email, password and return outcome', function() {
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should validate email with password, returning validation outcome', function() {
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.validate({
-						email: john.email,
-						password: john.password
-					});
-				})
+				.validate(JOHN)
 				.then(function(isCorrectPassword) {
 					assert.isTrue(isCorrectPassword);
 					return teacherDAO.validate({
-						email: john.email,
-						password: bob.password
+						email: JOHN.email,
+						password: BOB.password
 					});
 				})
 				.then(function(isCorrectPassword) {
@@ -506,21 +431,18 @@ describe('Data Access Object: Teacher', function() {
 				});
 		});
 
-		it('should NOT validate if provided email does not exist', function() {
+		it('should NOT validate if teacher does not exist', function() {
 			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.validate({
-						email: bob.email,
-						password: john.password
-					});
+				.validate({
+					email: BOB.email,
+					password: JOHN.password
 				})
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher (email: ${bob.email}) does not exist.`
+						`The teacher (email: ${BOB.email}) does not exist.`
 					);
 				});
 		});
