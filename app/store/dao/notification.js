@@ -189,6 +189,7 @@ const deleteByTeacher = ({ teacherId }) =>
 		.where({ teacher_id: teacherId })
 		.del();
 
+// TODO: Don't error out if no matches found
 const deleteBySenderId = ({ teacherId }) =>
 	teachers
 		.getById({ id: teacherId })
@@ -216,6 +217,7 @@ const deleteBySenderId = ({ teacherId }) =>
 			handle(error, `deleting notifications (sender id: ${teacherId})`)
 		);
 
+// TODO: Don't error out if no matches found
 const deleteBySenderEmail = ({ email }) =>
 	teachers
 		.getByEmail({ email })

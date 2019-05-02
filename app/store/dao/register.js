@@ -24,7 +24,7 @@ const checkIfExist = ({ teacherId, studentId, classId }) =>
 		.where({
 			teacher_id: teacherId,
 			student_id: studentId,
-			class_id: classId
+			class_id: classId || null
 		})
 		.select()
 		.then(result => {
@@ -32,7 +32,8 @@ const checkIfExist = ({ teacherId, studentId, classId }) =>
 				return Promise.reject(
 					new UniqueConstraintError(
 						'register',
-						`teacher id: ${teacherId}, student id: ${studentId}, class id: ${classId}`
+						`teacher id: ${teacherId}, student id: ${studentId}, class id: ${classId ||
+							null}`
 					)
 				);
 			}
@@ -113,7 +114,9 @@ const createByEmail = ({ teacherEmail, studentEmail, classId }) =>
 			return Promise.all([
 				Promise.resolve(teacherId),
 				Promise.resolve(result.id),
-				classes.getById({ id: classId })
+				classId == null
+					? Promise.resolve(null)
+					: classes.getById({ id: classId })
 			]);
 		})
 		.then(([teacherId, studentId, result]) => {
@@ -154,14 +157,6 @@ const getByTeacherId = ({ teacherId }) =>
 			}
 			return selectByTeacherId({ teacherId });
 		})
-		.then(result => {
-			if (!result || result.length === 0) {
-				return Promise.reject(
-					new NotFoundError(`register (teacher id: ${teacherId})`)
-				);
-			}
-			return Promise.resolve(result);
-		})
 		.catch(error =>
 			handle(error, `finding registers (teacher id: ${teacherId})`)
 		);
@@ -176,14 +171,6 @@ const getByTeacherEmail = ({ teacherEmail }) =>
 				);
 			}
 			return selectByTeacherId({ teacherId: result.id });
-		})
-		.then(result => {
-			if (!result || result.length === 0) {
-				return Promise.reject(
-					new NotFoundError(`register (teacher email: ${teacherEmail})`)
-				);
-			}
-			return Promise.resolve(result);
 		})
 		.catch(error =>
 			handle(error, `finding registers (teacher email: ${teacherEmail})`)
@@ -203,14 +190,6 @@ const getByStudentId = ({ studentId }) =>
 			}
 			return selectByStudentId({ studentId });
 		})
-		.then(result => {
-			if (!result || result.length === 0) {
-				return Promise.reject(
-					new NotFoundError(`register (student id: ${studentId})`)
-				);
-			}
-			return Promise.resolve(result);
-		})
 		.catch(error =>
 			handle(error, `finding registers (student id: ${studentId})`)
 		);
@@ -226,19 +205,11 @@ const getByStudentEmail = ({ studentEmail }) =>
 			}
 			return selectByStudentId({ studentId: result.id });
 		})
-		.then(result => {
-			if (!result || result.length === 0) {
-				return Promise.reject(
-					new NotFoundError(`register (student email: ${studentEmail})`)
-				);
-			}
-			return Promise.resolve(result);
-		})
 		.catch(error =>
 			handle(error, `finding registers (student email: ${studentEmail})`)
 		);
 
-const getByClassId = ({ classId }) =>
+const getByClass = ({ classId }) =>
 	classes
 		.getById({ id: classId })
 		.then(result => {
@@ -248,14 +219,6 @@ const getByClassId = ({ classId }) =>
 			return db('registers')
 				.where({ class_id: classId })
 				.select();
-		})
-		.then(result => {
-			if (!result || result.length === 0) {
-				return Promise.reject(
-					new NotFoundError(`register (class id: ${classId})`)
-				);
-			}
-			return Promise.resolve(result);
 		})
 		.catch(error => handle(error, `finding registers (class id: ${classId})`));
 
@@ -464,17 +427,14 @@ const deleteByTeacherId = ({ teacherId }) =>
 			}
 			return selectByTeacherId({ teacherId });
 		})
-		.then(result => {
-			if (result == null || result.length === 0) {
-				return Promise.reject(
-					new NotFoundError(`registers (teacher id: ${teacherId})`)
-				);
-			}
-			return Promise.all([
-				Promise.resolve(result),
-				deleteByTeacher({ teacherId })
-			]);
-		})
+		.then(result =>
+			Promise.all([
+				Promise.resolve(result || []),
+				result == null || result.length === 0
+					? Promise.resolve(false)
+					: deleteByTeacher({ teacherId })
+			])
+		)
 		.then(([result]) => {
 			return Promise.resolve(result);
 		})
@@ -496,17 +456,14 @@ const deleteByTeacherEmail = ({ teacherEmail }) =>
 				selectByTeacherId({ teacherId: result.id })
 			]);
 		})
-		.then(([teacherId, result]) => {
-			if (result == null || result.length === 0) {
-				return Promise.reject(
-					new NotFoundError(`register (teacher email: ${teacherEmail})`)
-				);
-			}
-			return Promise.all([
-				Promise.resolve(result),
-				deleteByTeacher({ teacherId })
-			]);
-		})
+		.then(([teacherId, result]) =>
+			Promise.all([
+				Promise.resolve(result || []),
+				result == null || result.length === 0
+					? Promise.resolve(false)
+					: deleteByTeacher({ teacherId })
+			])
+		)
 		.then(([result]) => {
 			return Promise.resolve(result);
 		})
@@ -528,17 +485,14 @@ const deleteByStudentId = ({ studentId }) =>
 			}
 			return selectByStudentId({ studentId });
 		})
-		.then(result => {
-			if (result == null || result.length === 0) {
-				return Promise.reject(
-					new NotFoundError(`register (student id: ${studentId})`)
-				);
-			}
-			return Promise.all([
-				Promise.resolve(result),
-				deleteByStudent({ studentId })
-			]);
-		})
+		.then(result =>
+			Promise.all([
+				Promise.resolve(result || []),
+				result == null || result.length === 0
+					? Promise.resolve(false)
+					: deleteByStudent({ studentId })
+			])
+		)
 		.then(([result]) => {
 			return Promise.resolve(result);
 		})
@@ -560,17 +514,14 @@ const deleteByStudentEmail = ({ studentEmail }) =>
 				selectByStudentId({ studentId: result.id })
 			]);
 		})
-		.then(([studentId, result]) => {
-			if (result == null || result.length === 0) {
-				return Promise.reject(
-					new NotFoundError(`register (student email: ${studentEmail})`)
-				);
-			}
-			return Promise.all([
-				Promise.resolve(result),
-				deleteByStudent({ studentId })
-			]);
-		})
+		.then(([studentId, result]) =>
+			Promise.all([
+				Promise.resolve(result || []),
+				result == null || result.length === 0
+					? Promise.resolve(false)
+					: deleteByStudent({ studentId })
+			])
+		)
 		.then(([result]) => {
 			return Promise.resolve(result);
 		})
@@ -589,19 +540,16 @@ const deleteByClass = ({ classId }) =>
 				.where({ class_id: classId })
 				.select();
 		})
-		.then(result => {
-			if (result == null || result.length === 0) {
-				return Promise.reject(
-					new NotFoundError(`register (class id: ${classId})`)
-				);
-			}
-			return Promise.all([
-				Promise.resolve(result),
-				db('registers')
-					.where({ class_id: classId })
-					.del()
-			]);
-		})
+		.then(result =>
+			Promise.all([
+				Promise.resolve(result || []),
+				result == null || result.length === 0
+					? Promise.resolve(false)
+					: db('registers')
+						.where({ class_id: classId })
+						.del()
+			])
+		)
 		.then(([result]) => {
 			return Promise.resolve(result);
 		})
@@ -628,7 +576,7 @@ module.exports = {
 	getByTeacherEmail,
 	getByStudentId,
 	getByStudentEmail,
-	getByClassId,
+	getByClass,
 	setTeacherById,
 	setTeacherByEmail,
 	setStudentById,
