@@ -2,8 +2,6 @@ const knex = require('knex');
 
 const config = require('../../../knexfile');
 
-const { PRECISION_TIMESTAMP } = require('../../constants');
-
 const {
 	MalformedResponseError,
 	UniqueConstraintError,
@@ -14,6 +12,10 @@ const {
 
 const { encryptPassword, comparePassword } = require('../../utils/crypto');
 
+const { PRECISION_TIMESTAMP } = require('../../constants');
+
+const TABLE_TEACHER = 'teachers';
+
 const db = knex(config);
 
 /* Creators */
@@ -21,7 +23,7 @@ const db = knex(config);
 const create = ({ name, email, password }) =>
 	encryptPassword(password)
 		.then(hash =>
-			db('teachers').insert({
+			db(TABLE_TEACHER).insert({
 				name,
 				email,
 				password: hash
@@ -53,7 +55,7 @@ const bulkCreate = teachers =>
 							email: teacher.email,
 							password: hash
 						})
-						.into('teachers')
+						.into(TABLE_TEACHER)
 				)
 				.then(ids => {
 					if (ids && ids.length === 1) {
@@ -81,25 +83,25 @@ const bulkCreate = teachers =>
 /* Readers */
 
 const getById = ({ id }) =>
-	db('teachers')
+	db(TABLE_TEACHER)
 		.where({ id })
 		.first()
 		.catch(error => handle(error, `finding teacher (id: ${id})`));
 
 const getByIds = ids =>
-	db('teachers')
+	db(TABLE_TEACHER)
 		.whereIn('id', ids)
 		.select()
 		.catch(error => handle(error, `finding teachers (ids: ${ids})`));
 
 const getByEmail = ({ email }) =>
-	db('teachers')
+	db(TABLE_TEACHER)
 		.where({ email })
 		.first()
 		.catch(error => handle(error, `finding teacher (email: ${email})`));
 
 const getByEmails = emails =>
-	db('teachers')
+	db(TABLE_TEACHER)
 		.whereIn('email', emails)
 		.select()
 		.catch(error => handle(error, `finding teachers (emails: ${emails})`));
@@ -108,11 +110,11 @@ const getByEmails = emails =>
 
 const setName = ({ id, name }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${id})`));
 			}
-			return db('teachers')
+			return db(TABLE_TEACHER)
 				.where({ id })
 				.update({ name, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
@@ -122,11 +124,11 @@ const setName = ({ id, name }) =>
 
 const setEmail = ({ id, email }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${id})`));
 			}
-			return db('teachers')
+			return db(TABLE_TEACHER)
 				.where({ id })
 				.update({ email, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
@@ -139,23 +141,23 @@ const setEmail = ({ id, email }) =>
 
 const setPassword = ({ id, password }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${id})`));
 			}
 			return Promise.all([
-				Promise.resolve(result),
-				comparePassword(password, result.password)
+				Promise.resolve(teacher),
+				comparePassword(password, teacher.password)
 			]);
 		})
-		.then(([result, isSamePassword]) => {
+		.then(([teacher, isSamePassword]) => {
 			if (isSamePassword) {
 				return Promise.reject(new IdenticalObjectError('password'));
 			}
-			return encryptPassword(password, result.password);
+			return encryptPassword(password, teacher.password);
 		})
 		.then(hash =>
-			db('teachers')
+			db(TABLE_TEACHER)
 				.where({ id })
 				.update({ password: hash, updated_at: db.fn.now(PRECISION_TIMESTAMP) })
 		)
@@ -164,33 +166,36 @@ const setPassword = ({ id, password }) =>
 /* Deletors */
 
 const remove = ({ id }) =>
-	db('teachers')
+	db(TABLE_TEACHER)
 		.where({ id })
 		.del();
 
 const deleteById = ({ id }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${id})`));
 			}
-			return Promise.all([Promise.resolve(result), remove({ id })]);
+			return Promise.all([Promise.resolve(teacher), remove({ id })]);
 		})
-		.then(([result]) => {
-			return Promise.resolve(result);
+		.then(([teacher]) => {
+			return Promise.resolve(teacher);
 		})
 		.catch(error => handle(error, `deleting teacher (id: ${id})`));
 
 const deleteByEmail = ({ email }) =>
 	getByEmail({ email })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (email: ${email})`));
 			}
-			return Promise.all([Promise.resolve(result), remove({ id: result.id })]);
+			return Promise.all([
+				Promise.resolve(teacher),
+				remove({ id: teacher.id })
+			]);
 		})
-		.then(([result]) => {
-			return Promise.resolve(result);
+		.then(([teacher]) => {
+			return Promise.resolve(teacher);
 		})
 		.catch(error => handle(error, `deleting teacher (email: ${email})`));
 
@@ -200,11 +205,11 @@ const deleteByEmail = ({ email }) =>
 
 const validate = ({ email, password }) =>
 	getByEmail({ email })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (email: ${email})`));
 			}
-			return comparePassword(password, result.password);
+			return comparePassword(password, teacher.password);
 		})
 		.catch(error =>
 			handle(error, `validating password of teacher (email: ${email})`)

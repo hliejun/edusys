@@ -9,14 +9,16 @@ const {
 	handle
 } = require('../../utils/errors');
 
-const db = knex(config);
+const { PRECISION_TIMESTAMP } = require('../../constants');
 
-const PRECISION_TIMESTAMP = 6;
+const TABLE_STUDENT = 'students';
+
+const db = knex(config);
 
 /* Creators */
 
 const create = ({ name, email }) =>
-	db('students')
+	db(TABLE_STUDENT)
 		.insert({ name, email })
 		.then(ids => {
 			if (ids && ids.length === 1) {
@@ -38,28 +40,30 @@ const create = ({ name, email }) =>
 /* Readers */
 
 const getById = ({ id }) =>
-	db('students')
+	db(TABLE_STUDENT)
 		.where({ id })
 		.first()
 		.catch(error => handle(error, `finding student (id: ${id})`));
 
+// TODO: Add bulk read by ids
+
 const getByEmail = ({ email }) =>
-	db('students')
+	db(TABLE_STUDENT)
 		.where({ email })
 		.first()
 		.catch(error => handle(error, `finding student (email: ${email})`));
 
-// TODO: Add bulk read (using transactions)
+// TODO: Add bulk read by emails
 
 /* Updaters */
 
 const setName = ({ id, name }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(student => {
+			if (student == null) {
 				return Promise.reject(new NotFoundError(`student (id: ${id})`));
 			}
-			return db('students')
+			return db(TABLE_STUDENT)
 				.where({ id })
 				.update({ name, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
@@ -69,11 +73,11 @@ const setName = ({ id, name }) =>
 
 const setEmail = ({ id, email }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(student => {
+			if (student == null) {
 				return Promise.reject(new NotFoundError(`student (id: ${id})`));
 			}
-			return db('students')
+			return db(TABLE_STUDENT)
 				.where({ id })
 				.update({ email, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
@@ -86,11 +90,11 @@ const setEmail = ({ id, email }) =>
 
 const setSuspension = ({ id, isSuspended }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(student => {
+			if (student == null) {
 				return Promise.reject(new NotFoundError(`student (id: ${id})`));
 			}
-			return db('students')
+			return db(TABLE_STUDENT)
 				.where({ id })
 				.update({
 					is_suspended: isSuspended,
@@ -107,20 +111,20 @@ const setSuspension = ({ id, isSuspended }) =>
 /* Deletors */
 
 const remove = ({ id }) =>
-	db('students')
+	db(TABLE_STUDENT)
 		.where({ id })
 		.del();
 
 const deleteById = ({ id }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(student => {
+			if (student == null) {
 				return Promise.reject(new NotFoundError(`student (id: ${id})`));
 			}
-			return Promise.all([Promise.resolve(result), remove({ id })]);
+			return Promise.all([Promise.resolve(student), remove({ id })]);
 		})
-		.then(([result]) => {
-			return Promise.resolve(result);
+		.then(([student]) => {
+			return Promise.resolve(student);
 		})
 		.catch(error => handle(error, `deleting student (id: ${id})`));
 
@@ -137,7 +141,7 @@ const deleteByEmail = ({ email }) =>
 		})
 		.catch(error => handle(error, `deleting student (email: ${email})`));
 
-// TODO: Add bulk delete (using transactions)
+// FIXME: Add bulk delete (using transactions)
 
 module.exports = {
 	create,

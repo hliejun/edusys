@@ -213,20 +213,15 @@ describe('Data Access Object: Teacher', function() {
 		});
 
 		it('should read teacher with matching id, returning attributes', function() {
-			return teacherDAO
-				.create(JANE)
-				.then(function() {
-					return teacherDAO.getById({ id: 1 });
-				})
-				.then(function(teacher) {
-					expect(teacher)
-						.to.be.an('object')
-						.that.includes({
-							id: 1,
-							name: JOHN.name,
-							email: JOHN.email
-						});
-				});
+			return teacherDAO.getById({ id: 1 }).then(function(teacher) {
+				expect(teacher)
+					.to.be.an('object')
+					.that.includes({
+						id: 1,
+						name: JOHN.name,
+						email: JOHN.email
+					});
+			});
 		});
 
 		it('should return "undefined" if teacher with matching id does not exist', function() {
@@ -365,7 +360,7 @@ describe('Data Access Object: Teacher', function() {
 		});
 
 		it('should update name of teacher, returning id', function() {
-			const name = 'Jonathan Doe';
+			const name = 'Jonathan';
 			return teacherDAO
 				.setName({ id: 1, name })
 				.then(function(id) {
@@ -390,7 +385,7 @@ describe('Data Access Object: Teacher', function() {
 			return teacherDAO
 				.setName({
 					id: 2,
-					name: 'Jonathan Doe'
+					name: 'Jonathan'
 				})
 				.catch(function(error) {
 					expect(function() {

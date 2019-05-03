@@ -2,8 +2,11 @@ const chai = require('chai');
 const knex = require('knex');
 
 const config = require('../../../knexfile');
-
 const studentDAO = require('./student');
+
+const { STUDENTS } = require('../../constants');
+
+const { MALICE, MAX, MAY } = STUDENTS;
 
 chai.use(require('chai-datetime'));
 
@@ -12,29 +15,16 @@ const expect = chai.expect;
 
 const db = knex(config);
 
-const john = {
-	name: 'John Doe',
-	email: 'john@email.com'
-};
-
-const jane = {
-	name: 'Jane Doe',
-	email: 'jane@email.com'
-};
-
-const alice = {
-	name: 'Alice',
-	email: 'john@email.com'
-};
-
-// TODO: Shift commented validation tests to actions
-
 describe('Data Access Object: Student', function() {
 	beforeEach(function() {
 		return db.migrate
 			.rollback()
-			.then(() => db.migrate.latest())
-			.then(() => db.seed.run());
+			.then(function() {
+				return db.migrate.latest();
+			})
+			.then(function() {
+				return db.seed.run();
+			});
 	});
 
 	afterEach(function() {
@@ -42,9 +32,9 @@ describe('Data Access Object: Student', function() {
 	});
 
 	context('create', function() {
-		it('should create a row with returning values', function() {
+		it('should create a student, returning attributes', function() {
 			return studentDAO
-				.create(john)
+				.create(MAX)
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
@@ -53,30 +43,30 @@ describe('Data Access Object: Student', function() {
 						.where({ id })
 						.first();
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(student) {
+					expect(student)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: john.name,
-							email: john.email,
+							name: MAX.name,
+							email: MAX.email,
 							is_suspended: false
 						});
-					expect(result['created_at'])
+					expect(student['created_at'])
 						.to.be.a('date')
-						.that.equalDate(result['updated_at'])
-						.and.equalTime(result['updated_at']);
+						.that.equalDate(student['updated_at'])
+						.and.equalTime(student['updated_at']);
 				});
 		});
 
-		it('should create another row if email is unique', function() {
+		it('should create another student if email is unique', function() {
 			return studentDAO
-				.create(john)
+				.create(MAX)
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
 						.that.equals(1);
-					return studentDAO.create(jane);
+					return studentDAO.create(MAY);
 				})
 				.then(function(id) {
 					expect(id)
@@ -86,27 +76,27 @@ describe('Data Access Object: Student', function() {
 						.where({ id })
 						.first();
 				})
-				.then(function(result) {
-					assert.notEqual(john.email, jane.email);
-					expect(result)
+				.then(function(student) {
+					assert.notEqual(MAX.email, MAY.email);
+					expect(student)
 						.to.be.an('object')
 						.that.includes({
 							id: 2,
-							name: jane.name,
-							email: jane.email,
+							name: MAY.name,
+							email: MAY.email,
 							is_suspended: false
 						});
-					expect(result['created_at'])
+					expect(student['created_at'])
 						.to.be.a('date')
-						.that.equalDate(result['updated_at']);
+						.that.equalDate(student['updated_at']);
 				});
 		});
 
-		it('should NOT create a row if email is non-unique', function() {
+		it('should NOT create a student if email is identical', function() {
 			return studentDAO
-				.create(john)
+				.create(MAX)
 				.then(function() {
-					return studentDAO.create(alice);
+					return studentDAO.create(MALICE);
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -114,126 +104,109 @@ describe('Data Access Object: Student', function() {
 					}).to.throw(
 						Error,
 						`The email (${
-							john.email
+							MAX.email
 						}) already exists. Please use a different and unique email.`
 					);
 				});
 		});
-
-		// it('should NOT create a row if name is invalid', function() {
-		// 	// TODO: Validation test...
-		// });
-
-		// it('should NOT create a row if email is invalid', function() {
-		// 	// TODO: Validation test...
-		// });
 	});
+
+	// TODO: Add test for bulk create
 
 	context('getById', function() {
-		it('should read and return the row corresponding to given id', function() {
-			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.create(jane);
-				})
-				.then(function() {
-					return studentDAO.getById({ id: 1 });
-				})
-				.then(function(result) {
-					expect(result)
-						.to.be.an('object')
-						.that.includes({
-							id: 1,
-							name: john.name,
-							email: john.email,
-							is_suspended: false
-						});
-				});
+		beforeEach(function() {
+			return studentDAO.create(MAX);
 		});
 
-		it('should read and return "undefined" if given a row id that does not exist', function() {
-			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.getById({ id: 2 });
-				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
-				});
+		it('should read student with matching id, returning attributes', function() {
+			return studentDAO.getById({ id: 1 }).then(function(student) {
+				expect(student)
+					.to.be.an('object')
+					.that.includes({
+						id: 1,
+						name: MAX.name,
+						email: MAX.email,
+						is_suspended: false
+					});
+			});
+		});
+
+		it('should return "undefined" if student with matching id does not exist', function() {
+			return studentDAO.getById({ id: 2 }).then(function(student) {
+				expect(student).to.be.an('undefined');
+			});
 		});
 	});
 
+	// TODO: Add test for bulk read by ids
+
 	context('getByEmail', function() {
-		it('should read and return the row corresponding to given email', function() {
+		beforeEach(function() {
+			return studentDAO.create(MAX);
+		});
+
+		it('should read student with matching email, returning attributes', function() {
 			return studentDAO
-				.create(john)
+				.create(MAY)
 				.then(function() {
-					return studentDAO.create(jane);
+					return studentDAO.getByEmail({ email: MAY.email });
 				})
-				.then(function() {
-					return studentDAO.getByEmail({ email: jane.email });
-				})
-				.then(function(result) {
-					expect(result)
+				.then(function(student) {
+					expect(student)
 						.to.be.an('object')
 						.that.includes({
 							id: 2,
-							name: jane.name,
-							email: jane.email,
+							name: MAY.name,
+							email: MAY.email,
 							is_suspended: false
 						});
 				});
 		});
 
-		it('should read and return "undefined" if given an email that does not exist', function() {
+		it('should return "undefined" if student with matching email does not exist', function() {
 			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.getByEmail({ email: jane.email });
-				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
+				.getByEmail({ email: MAY.email })
+				.then(function(student) {
+					expect(student).to.be.an('undefined');
 				});
 		});
 	});
 
+	// TODO: Add test for bulk read by emails
+
 	context('setName', function() {
-		it('should update name field with provided value and return id', function() {
+		beforeEach(function() {
+			return studentDAO.create(MAX);
+		});
+
+		it('should update name of student, returning id', function() {
+			const name = 'Maximilian';
 			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.setName({
-						id: 1,
-						name: 'Jonathan Doe'
-					});
-				})
+				.setName({ id: 1, name })
 				.then(function(id) {
 					expect(id).to.equal(1);
 					return studentDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(student) {
+					expect(student)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: 'Jonathan Doe',
-							email: john.email,
+							name,
+							email: MAX.email,
 							is_suspended: false
 						});
-					expect(result['updated_at'])
+					expect(student['updated_at'])
 						.to.be.a('date')
-						.that.afterTime(result['created_at']);
+						.that.afterTime(student['created_at']);
 				});
 		});
 
-		it('should NOT update name field if provided id does not exist', function() {
+		it('should NOT update if student does not exist', function() {
 			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.setName({
-						id: 2,
-						name: 'Jonathan Doe'
-					});
+				.setName({
+					id: 2,
+					name: 'Maximilian'
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -241,49 +214,41 @@ describe('Data Access Object: Student', function() {
 					}).to.throw(Error, 'The student (id: 2) does not exist.');
 				});
 		});
-
-		// it('should NOT update name field if provided name is invalid', function() {
-		// 	// TODO: Validation test...
-		// });
 	});
 
 	context('setEmail', function() {
-		it('should update email field with provided value and return id', function() {
+		beforeEach(function() {
+			return studentDAO.create(MAX);
+		});
+
+		it('should update email of student, returning id', function() {
+			const email = 'maximilian@email.com';
 			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.setEmail({
-						id: 1,
-						email: 'jonathan@email.com'
-					});
-				})
+				.setEmail({ id: 1, email })
 				.then(function(id) {
 					expect(id).to.equal(1);
 					return studentDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(student) {
+					expect(student)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: john.name,
-							email: 'jonathan@email.com',
+							name: MAX.name,
+							email,
 							is_suspended: false
 						});
-					expect(result['updated_at'])
+					expect(student['updated_at'])
 						.to.be.a('date')
-						.that.afterTime(result['created_at']);
+						.that.afterTime(student['created_at']);
 				});
 		});
 
-		it('should NOT update email field if provided id does not exist', function() {
+		it('should NOT update if student does not exist', function() {
 			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.setEmail({
-						id: 2,
-						email: 'jonathan@email.com'
-					});
+				.setEmail({
+					id: 2,
+					email: 'maximilian@email.com'
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -292,16 +257,13 @@ describe('Data Access Object: Student', function() {
 				});
 		});
 
-		it('should NOT update email field if provided email already exists', function() {
+		it('should NOT update if email is already in use', function() {
 			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.create(jane);
-				})
+				.create(MAY)
 				.then(function() {
 					return studentDAO.setEmail({
 						id: 2,
-						email: john.email
+						email: MAX.email
 					});
 				})
 				.catch(function(error) {
@@ -310,54 +272,48 @@ describe('Data Access Object: Student', function() {
 					}).to.throw(
 						Error,
 						`The email (${
-							john.email
+							MAX.email
 						}) already exists. Please use a different and unique email.`
 					);
 				});
 		});
-
-		// it('should NOT update email field if provided email is invalid', function() {
-		// 	// TODO: Validation test...
-		// });
 	});
 
 	context('setSuspension', function() {
-		it('should update is_suspended field with provided flag and return id', function() {
+		beforeEach(function() {
+			return studentDAO.create(MAX);
+		});
+
+		it('should update suspension flag of student, returning id', function() {
 			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.setSuspension({
-						id: 1,
-						isSuspended: true
-					});
+				.setSuspension({
+					id: 1,
+					isSuspended: true
 				})
 				.then(function(id) {
 					expect(id).to.equal(1);
 					return studentDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(student) {
+					expect(student)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: john.name,
-							email: john.email,
+							name: MAX.name,
+							email: MAX.email,
 							is_suspended: true
 						});
-					expect(result['updated_at'])
+					expect(student['updated_at'])
 						.to.be.a('date')
-						.that.afterTime(result['created_at']);
+						.that.afterTime(student['created_at']);
 				});
 		});
 
-		it('should NOT update is_suspended field if provided id does not exist', function() {
+		it('should NOT update if student does not exist', function() {
 			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.setSuspension({
-						id: 2,
-						isSuspended: true
-					});
+				.setSuspension({
+					id: 2,
+					isSuspended: true
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -368,79 +324,75 @@ describe('Data Access Object: Student', function() {
 	});
 
 	context('deleteById', function() {
-		it('should delete a row corresponding to provided id with returning values', function() {
+		beforeEach(function() {
+			return studentDAO.create(MAX);
+		});
+
+		it('should delete student with matching id, returning attributes', function() {
 			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.deleteById({ id: 1 });
-				})
-				.then(function(result) {
-					expect(result)
+				.deleteById({ id: 1 })
+				.then(function(student) {
+					expect(student)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: john.name,
-							email: john.email,
+							name: MAX.name,
+							email: MAX.email,
 							is_suspended: false
 						});
 					return studentDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
+				.then(function(student) {
+					expect(student).to.be.an('undefined');
 				});
 		});
 
-		it('should NOT delete a row if provided id does not exist', function() {
-			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.deleteById({ id: 2 });
-				})
-				.catch(function(error) {
-					expect(function() {
-						throw error;
-					}).to.throw(Error, 'The student (id: 2) does not exist.');
-				});
+		it('should NOT delete if student does not exist', function() {
+			return studentDAO.deleteById({ id: 2 }).catch(function(error) {
+				expect(function() {
+					throw error;
+				}).to.throw(Error, 'The student (id: 2) does not exist.');
+			});
 		});
 	});
 
 	context('deleteByEmail', function() {
-		it('should delete a row corresponding to provided email with returning values', function() {
+		beforeEach(function() {
+			return studentDAO.create(MAX);
+		});
+
+		it('should delete student with matching email, returning attributes', function() {
 			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.deleteByEmail({ email: john.email });
-				})
-				.then(function(result) {
-					expect(result)
+				.deleteByEmail({ email: MAX.email })
+				.then(function(student) {
+					expect(student)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							name: john.name,
-							email: john.email,
+							name: MAX.name,
+							email: MAX.email,
 							is_suspended: false
 						});
 					return studentDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
+				.then(function(student) {
+					expect(student).to.be.an('undefined');
 				});
 		});
 
-		it('should NOT delete a row if provided email does not exist', function() {
+		it('should NOT delete if student does not exist', function() {
 			return studentDAO
-				.create(john)
-				.then(function() {
-					return studentDAO.deleteByEmail({ email: jane.email });
-				})
+				.deleteByEmail({ email: MAY.email })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The student (email: ${jane.email}) does not exist.`
+						`The student (email: ${MAY.email}) does not exist.`
 					);
 				});
 		});
 	});
+
+	// FIXME: Add test for bulk delete
 });
