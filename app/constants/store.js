@@ -26,6 +26,10 @@ const STUDENTS = {
 		name: 'Malice',
 		email: 'max@email.com'
 	},
+	MATT: {
+		name: 'Matt',
+		email: 'matt@email.com'
+	},
 	MAX: {
 		name: 'Max',
 		email: 'max@email.com'

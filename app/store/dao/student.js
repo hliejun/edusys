@@ -35,7 +35,37 @@ const create = ({ name, email }) =>
 			return handle(error, `creating student (name: ${name}, email: ${email})`);
 		});
 
-// TODO: Add bulk create (using transactions)
+const bulkCreate = students =>
+	db.transaction(transaction => {
+		const creations = students.map(student =>
+			transaction
+				.insert({
+					name: student.name,
+					email: student.email
+				})
+				.into(TABLE_STUDENT)
+				.then(ids => {
+					if (ids && ids.length === 1) {
+						return Promise.resolve(ids[0]);
+					}
+					return Promise.reject(
+						new MalformedResponseError('id of student created', ids)
+					);
+				})
+				.catch(error => {
+					if (error.code === 'ER_DUP_ENTRY') {
+						return Promise.reject(
+							new UniqueConstraintError('email', student.email)
+						);
+					}
+					return handle(
+						error,
+						`creating student (name: ${student.name}, email: ${student.email})`
+					);
+				})
+		);
+		return Promise.all(creations);
+	});
 
 /* Readers */
 
@@ -45,7 +75,11 @@ const getById = ({ id }) =>
 		.first()
 		.catch(error => handle(error, `finding student (id: ${id})`));
 
-// TODO: Add bulk read by ids
+const getByIds = ids =>
+	db(TABLE_STUDENT)
+		.whereIn('id', ids)
+		.select()
+		.catch(error => handle(error, `finding students (ids: ${ids})`));
 
 const getByEmail = ({ email }) =>
 	db(TABLE_STUDENT)
@@ -53,7 +87,11 @@ const getByEmail = ({ email }) =>
 		.first()
 		.catch(error => handle(error, `finding student (email: ${email})`));
 
-// TODO: Add bulk read by emails
+const getByEmails = emails =>
+	db(TABLE_STUDENT)
+		.whereIn('email', emails)
+		.select()
+		.catch(error => handle(error, `finding students (emails: ${emails})`));
 
 /* Updaters */
 
@@ -145,8 +183,11 @@ const deleteByEmail = ({ email }) =>
 
 module.exports = {
 	create,
+	bulkCreate,
 	getById,
+	getByIds,
 	getByEmail,
+	getByEmails,
 	setName,
 	setEmail,
 	setSuspension,

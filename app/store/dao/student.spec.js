@@ -6,7 +6,7 @@ const studentDAO = require('./student');
 
 const { STUDENTS } = require('../../constants');
 
-const { MALICE, MAX, MAY } = STUDENTS;
+const { MALICE, MATT, MAX, MAY } = STUDENTS;
 
 chai.use(require('chai-datetime'));
 
@@ -111,7 +111,96 @@ describe('Data Access Object: Student', function() {
 		});
 	});
 
-	// TODO: Add test for bulk create
+	context('bulkCreate', function() {
+		beforeEach(function() {
+			return studentDAO.create(MAY);
+		});
+
+		it('should create students, returning an array of attributes', function() {
+			return studentDAO
+				.bulkCreate([MATT, MAX])
+				.then(function(studentIds) {
+					expect(studentIds)
+						.to.be.an('array')
+						.of.length(2);
+					expect(studentIds).to.have.members([2, 3]);
+					return studentDAO.getByIds(studentIds);
+				})
+				.then(function(students) {
+					expect(students)
+						.to.be.an('array')
+						.of.length(2);
+					students.forEach(function(student, index) {
+						switch (student.email) {
+						case MATT.email:
+							expect(student)
+								.to.be.an('object')
+								.that.includes({
+									id: index + 2,
+									name: MATT.name,
+									email: MATT.email,
+									is_suspended: false
+								});
+							break;
+						case MAX.email:
+							expect(student)
+								.to.be.an('object')
+								.that.includes({
+									id: index + 2,
+									name: MAX.name,
+									email: MAX.email,
+									is_suspended: false
+								});
+							break;
+						default:
+							assert.fail('Unexpected student email after bulk creation.');
+						}
+					});
+				});
+		});
+
+		it('should NOT create any student if one or more has email identical to an existing student', function() {
+			return studentDAO
+				.bulkCreate([MATT, MAX, MAY])
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(
+						Error,
+						`The email (${
+							MAY.email
+						}) already exists. Please use a different and unique email.`
+					);
+					return studentDAO.getByIds([2, 3, 4]);
+				})
+				.then(function(students) {
+					expect(students)
+						.to.be.an('array')
+						.of.length(0);
+				});
+		});
+
+		it('should NOT create any student if two or more has email identical to each other', function() {
+			return studentDAO
+				.bulkCreate([MALICE, MATT, MAX])
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(
+						Error,
+						`The email (${
+							MAX.email
+						}) already exists. Please use a different and unique email.`
+					);
+					return studentDAO.getByIds([2, 3, 4]);
+				})
+				.then(function(students) {
+					expect(students)
+						.to.be.an('array')
+						.of.length(0);
+				});
+		});
+	});
 
 	context('getById', function() {
 		beforeEach(function() {
@@ -138,7 +227,51 @@ describe('Data Access Object: Student', function() {
 		});
 	});
 
-	// TODO: Add test for bulk read by ids
+	context('getByIds', function() {
+		beforeEach(function() {
+			return studentDAO.bulkCreate([MAX, MAY]);
+		});
+
+		it('should read student with matching ids, returning array of attributes', function() {
+			return studentDAO.getByIds([1, 2, 3]).then(function(students) {
+				expect(students)
+					.to.be.an('array')
+					.of.length(2);
+				students.forEach(function(student) {
+					switch (student.email) {
+					case MAY.email:
+						expect(student)
+							.to.be.an('object')
+							.that.includes({
+								name: MAY.name,
+								email: MAY.email,
+								is_suspended: false
+							});
+						break;
+					case MAX.email:
+						expect(student)
+							.to.be.an('object')
+							.that.includes({
+								name: MAX.name,
+								email: MAX.email,
+								is_suspended: false
+							});
+						break;
+					default:
+						assert.fail('Unexpected student email when getting from ids.');
+					}
+				});
+			});
+		});
+
+		it('should return an empty array if teacher with matching id does not exist', function() {
+			return studentDAO.getByIds([4, 5]).then(function(students) {
+				expect(students)
+					.to.be.an('array')
+					.of.length(0);
+			});
+		});
+	});
 
 	context('getByEmail', function() {
 		beforeEach(function() {
@@ -172,7 +305,53 @@ describe('Data Access Object: Student', function() {
 		});
 	});
 
-	// TODO: Add test for bulk read by emails
+	context('getByEmails', function() {
+		beforeEach(function() {
+			return studentDAO.bulkCreate([MAX, MAY]);
+		});
+
+		it('should read student with matching emails, returning array of attributes', function() {
+			return studentDAO
+				.getByEmails([MAY.email, MAX.email, MATT.email])
+				.then(function(students) {
+					expect(students)
+						.to.be.an('array')
+						.of.length(2);
+					students.forEach(function(student) {
+						switch (student.email) {
+						case MAY.email:
+							expect(student)
+								.to.be.an('object')
+								.that.includes({
+									name: MAY.name,
+									email: MAY.email,
+									is_suspended: false
+								});
+							break;
+						case MAX.email:
+							expect(student)
+								.to.be.an('object')
+								.that.includes({
+									name: MAX.name,
+									email: MAX.email,
+									is_suspended: false
+								});
+							break;
+						default:
+							assert.fail('Unexpected student email when getting from ids.');
+						}
+					});
+				});
+		});
+
+		it('should return an empty array if student with matching email does not exist', function() {
+			return studentDAO.getByEmails([MATT.email]).then(function(students) {
+				expect(students)
+					.to.be.an('array')
+					.of.length(0);
+			});
+		});
+	});
 
 	context('setName', function() {
 		beforeEach(function() {
