@@ -111,6 +111,10 @@ describe('Data Access Object: Student', function() {
 		});
 	});
 
+	// TODO: Test non-strict transactable create
+
+	// TODO: Test non-strict transactable bulk create
+
 	context('bulkCreate', function() {
 		beforeEach(function() {
 			return studentDAO.create(MAY);

@@ -2,8 +2,11 @@ const chai = require('chai');
 const knex = require('knex');
 
 const config = require('../../../knexfile');
-
 const classDAO = require('./class');
+
+const { CLASSES } = require('../../constants');
+
+const { COMPUTING, MATH } = CLASSES;
 
 chai.use(require('chai-datetime'));
 
@@ -12,22 +15,16 @@ const expect = chai.expect;
 
 const db = knex(config);
 
-const computing = {
-	title: 'CS1101S: Programming Methodology'
-};
-
-const math = {
-	title: 'MA1101R: Linear Algebra'
-};
-
-// TODO: Shift commented validation tests to actions
-
 describe('Data Access Object: Class', function() {
 	beforeEach(function() {
 		return db.migrate
 			.rollback()
-			.then(() => db.migrate.latest())
-			.then(() => db.seed.run());
+			.then(function() {
+				return db.migrate.latest();
+			})
+			.then(function() {
+				return db.seed.run();
+			});
 	});
 
 	afterEach(function() {
@@ -35,9 +32,9 @@ describe('Data Access Object: Class', function() {
 	});
 
 	context('create', function() {
-		it('should create a row with returning values', function() {
+		it('should create a class, returning attributes', function() {
 			return classDAO
-				.create(computing)
+				.create(COMPUTING)
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
@@ -46,28 +43,28 @@ describe('Data Access Object: Class', function() {
 						.where({ id })
 						.first();
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(classroom) {
+					expect(classroom)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							title: computing.title
+							title: COMPUTING.title
 						});
-					expect(result['created_at'])
+					expect(classroom['created_at'])
 						.to.be.a('date')
-						.that.equalDate(result['updated_at'])
-						.and.equalTime(result['updated_at']);
+						.that.equalDate(classroom['updated_at'])
+						.and.equalTime(classroom['updated_at']);
 				});
 		});
 
-		it('should create another row if title is unique', function() {
+		it('should create another class if title is unique', function() {
 			return classDAO
-				.create(computing)
+				.create(COMPUTING)
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
 						.that.equals(1);
-					return classDAO.create(math);
+					return classDAO.create(MATH);
 				})
 				.then(function(id) {
 					expect(id)
@@ -77,25 +74,25 @@ describe('Data Access Object: Class', function() {
 						.where({ id })
 						.first();
 				})
-				.then(function(result) {
-					assert.notEqual(computing.title, math.title);
-					expect(result)
+				.then(function(classroom) {
+					assert.notEqual(COMPUTING.title, MATH.title);
+					expect(classroom)
 						.to.be.an('object')
 						.that.includes({
 							id: 2,
-							title: math.title
+							title: MATH.title
 						});
-					expect(result['created_at'])
+					expect(classroom['created_at'])
 						.to.be.a('date')
-						.that.equalDate(result['updated_at']);
+						.that.equalDate(classroom['updated_at']);
 				});
 		});
 
-		it('should NOT create a row if title is non-unique', function() {
+		it('should NOT create a class if title is identical', function() {
 			return classDAO
-				.create(computing)
+				.create(COMPUTING)
 				.then(function() {
-					return classDAO.create(computing);
+					return classDAO.create(COMPUTING);
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -103,116 +100,98 @@ describe('Data Access Object: Class', function() {
 					}).to.throw(
 						Error,
 						`The class title (${
-							computing.title
+							COMPUTING.title
 						}) already exists. Please use a different and unique class title.`
 					);
 				});
 		});
-
-		// it('should NOT create a row if title is invalid', function() {
-		// 	// TODO: Validation test...
-		// });
 	});
 
+	// TODO: Test non-strict transactable create
+
 	context('getById', function() {
-		it('should read and return the row corresponding to given id', function() {
-			return classDAO
-				.create(computing)
-				.then(function() {
-					return classDAO.create(math);
-				})
-				.then(function() {
-					return classDAO.getById({ id: 1 });
-				})
-				.then(function(result) {
-					expect(result)
-						.to.be.an('object')
-						.that.includes({
-							id: 1,
-							title: computing.title
-						});
-				});
+		beforeEach(function() {
+			return classDAO.create(COMPUTING);
 		});
 
-		it('should read and return "undefined" if given a row id that does not exist', function() {
-			return classDAO
-				.create(computing)
-				.then(function() {
-					return classDAO.getById({ id: 2 });
-				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
-				});
+		it('should read class with matching id, returning attributes', function() {
+			return classDAO.getById({ id: 1 }).then(function(result) {
+				expect(classroom)
+					.to.be.an('object')
+					.that.includes({
+						id: 1,
+						title: COMPUTING.title
+					});
+			});
+		});
+
+		it('should return "undefined" if class with matching id does not exist', function() {
+			return classDAO.getById({ id: 2 }).then(function(classroom) {
+				expect(classroom).to.be.an('undefined');
+			});
 		});
 	});
 
 	context('getByTitle', function() {
-		it('should read and return the row corresponding to given title', function() {
+		beforeEach(function() {
+			return classDAO.create(COMPUTING);
+		});
+
+		it('should read class with matching title, returning attributes', function() {
 			return classDAO
-				.create(computing)
+				.create(MATH)
 				.then(function() {
-					return classDAO.create(math);
+					return classDAO.getByTitle({ title: MATH.title });
 				})
-				.then(function() {
-					return classDAO.getByTitle({ title: math.title });
-				})
-				.then(function(result) {
-					expect(result)
+				.then(function(classroom) {
+					expect(classroom)
 						.to.be.an('object')
 						.that.includes({
 							id: 2,
-							title: math.title
+							title: MATH.title
 						});
 				});
 		});
 
-		it('should read and return "undefined" if given a title that does not exist', function() {
+		it('should return "undefined" if class with matching title does not exist', function() {
 			return classDAO
-				.create(computing)
-				.then(function() {
-					return classDAO.getByTitle({ title: math.title });
-				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
+				.getByTitle({ title: MATH.title })
+				.then(function(classroom) {
+					expect(classroom).to.be.an('undefined');
 				});
 		});
 	});
 
+	// FIXME: Add bulk read test
+
 	context('setTitle', function() {
-		it('should update title field with provided value and return id', function() {
+		beforeEach(function() {
+			return classDAO.create(COMPUTING);
+		});
+
+		it('should update title of class, returning id', function() {
+			const title = 'CS2011S: Programming Methodology';
 			return classDAO
-				.create(computing)
-				.then(function() {
-					return classDAO.setTitle({
-						id: 1,
-						title: 'CS2011S: Programming Methodology'
-					});
-				})
+				.setTitle({ id: 1, title })
 				.then(function(id) {
 					expect(id).to.equal(1);
 					return classDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(classroom) {
+					expect(classroom)
 						.to.be.an('object')
-						.that.includes({
-							id: 1,
-							title: 'CS2011S: Programming Methodology'
-						});
-					expect(result['updated_at'])
+						.that.includes({ id: 1, title });
+					expect(classroom['updated_at'])
 						.to.be.a('date')
-						.that.afterTime(result['created_at']);
+						.that.afterTime(classroom['created_at']);
 				});
 		});
 
-		it('should NOT update title field if provided id does not exist', function() {
+		it('should NOT update if class does not exist', function() {
 			return classDAO
-				.create(computing)
-				.then(function() {
-					return classDAO.setTitle({
-						id: 2,
-						title: 'CS2011S: Programming Methodology'
-					});
+				.setTitle({
+					id: 2,
+					title: 'CS2011S: Programming Methodology'
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -221,16 +200,13 @@ describe('Data Access Object: Class', function() {
 				});
 		});
 
-		it('should NOT update title field if provided title already exists', function() {
+		it('should NOT update if title is already in use', function() {
 			return classDAO
-				.create(computing)
-				.then(function() {
-					return classDAO.create(math);
-				})
+				.create(MATH)
 				.then(function() {
 					return classDAO.setTitle({
 						id: 2,
-						title: computing.title
+						title: COMPUTING.title
 					});
 				})
 				.catch(function(error) {
@@ -239,85 +215,75 @@ describe('Data Access Object: Class', function() {
 					}).to.throw(
 						Error,
 						`The class title (${
-							computing.title
+							COMPUTING.title
 						}) already exists. Please use a different and unique class title.`
 					);
 				});
 		});
-
-		// it('should NOT update title field if provided title is invalid', function() {
-		// 	// TODO: Validation test...
-		// });
 	});
 
 	context('deleteById', function() {
-		it('should delete a row corresponding to provided id with returning values', function() {
+		beforeEach(function() {
+			return classDAO.create(COMPUTING);
+		});
+
+		it('should delete class with matching id, returning attributes', function() {
 			return classDAO
-				.create(computing)
-				.then(function() {
-					return classDAO.deleteById({ id: 1 });
-				})
-				.then(function(result) {
-					expect(result)
+				.deleteById({ id: 1 })
+				.then(function(classroom) {
+					expect(classroom)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							title: computing.title
+							title: COMPUTING.title
 						});
 					return classDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
+				.then(function(classroom) {
+					expect(classroom).to.be.an('undefined');
 				});
 		});
 
-		it('should NOT delete a row if provided id does not exist', function() {
-			return classDAO
-				.create(computing)
-				.then(function() {
-					return classDAO.deleteById({ id: 2 });
-				})
-				.catch(function(error) {
-					expect(function() {
-						throw error;
-					}).to.throw(Error, 'The class (id: 2) does not exist.');
-				});
+		it('should NOT delete if class does not exist', function() {
+			return classDAO.deleteById({ id: 2 }).catch(function(error) {
+				expect(function() {
+					throw error;
+				}).to.throw(Error, 'The class (id: 2) does not exist.');
+			});
 		});
 	});
 
 	context('deleteByTitle', function() {
-		it('should delete a row corresponding to provided title with returning values', function() {
+		beforeEach(function() {
+			return classDAO.create(COMPUTING);
+		});
+
+		it('should delete class with matching title, returning attributes', function() {
 			return classDAO
-				.create(computing)
-				.then(function() {
-					return classDAO.deleteByTitle({ title: computing.title });
-				})
-				.then(function(result) {
-					expect(result)
+				.deleteByTitle({ title: COMPUTING.title })
+				.then(function(classroom) {
+					expect(classroom)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
-							title: computing.title
+							title: COMPUTING.title
 						});
 					return classDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
+				.then(function(classroom) {
+					expect(classroom).to.be.an('undefined');
 				});
 		});
 
-		it('should NOT delete a row if provided title does not exist', function() {
+		it('should NOT delete if class does not exist', function() {
 			return classDAO
-				.create(computing)
-				.then(function() {
-					return classDAO.deleteByTitle({ title: math.title });
-				})
+				.deleteByTitle({ title: MATH.title })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The class (title: ${math.title}) does not exist.`
+						`The class (title: ${MATH.title}) does not exist.`
 					);
 				});
 		});

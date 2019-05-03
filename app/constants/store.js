@@ -40,7 +40,14 @@ const STUDENTS = {
 	}
 };
 
-const CLASSES = {};
+const CLASSES = {
+	COMPUTING: {
+		title: 'CS1101S: Programming Methodology'
+	},
+	MATH: {
+		title: 'MA1101R: Linear Algebra'
+	}
+};
 
 const NOTIFICATIONS = {};
 

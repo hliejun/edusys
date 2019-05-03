@@ -44,6 +44,8 @@ const create = ({ name, email, password }) =>
 			return handle(error, `creating teacher (name: ${name}, email: ${email})`);
 		});
 
+// TODO: Add non-strict transactable create
+
 const bulkCreate = teachers =>
 	db.transaction(transaction => {
 		const creations = teachers.map(teacher =>

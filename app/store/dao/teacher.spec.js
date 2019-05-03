@@ -118,6 +118,8 @@ describe('Data Access Object: Teacher', function() {
 		});
 	});
 
+	// TODO: Test non-strict transactable create
+
 	context('bulkCreate', function() {
 		beforeEach(function() {
 			return teacherDAO.create(JANE);

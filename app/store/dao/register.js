@@ -132,7 +132,11 @@ const createByEmail = ({ teacherEmail, studentEmail, classId }) =>
 			)
 		);
 
+// TODO: Add non-strict transactable create
+
 // TODO: Add bulk create (using transactions)
+
+// TODO: Add non-strict bulk create
 
 /* Readers */
 
