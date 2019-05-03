@@ -115,7 +115,7 @@ describe('Data Access Object: Class', function() {
 		});
 
 		it('should read class with matching id, returning attributes', function() {
-			return classDAO.getById({ id: 1 }).then(function(result) {
+			return classDAO.getById({ id: 1 }).then(function(classroom) {
 				expect(classroom)
 					.to.be.an('object')
 					.that.includes({
