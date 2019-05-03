@@ -14,6 +14,8 @@ const db = knex(config);
 
 const PRECISION_TIMESTAMP = 6;
 
+// FIXME: Refactor
+
 /* Creators */
 
 const create = ({ teacherId, title, content }) =>

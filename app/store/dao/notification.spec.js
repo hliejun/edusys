@@ -13,6 +13,8 @@ const expect = chai.expect;
 
 const db = knex(config);
 
+// FIXME: Refactor
+
 const john = {
 	name: 'John Doe',
 	email: 'john@email.com',

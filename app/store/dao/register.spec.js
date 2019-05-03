@@ -14,44 +14,22 @@ const expect = chai.expect;
 
 const db = knex(config);
 
-const john = {
-	name: 'John Doe',
-	email: 'john@email.com',
-	password: 'P455w0rd'
-};
+const { TEACHERS, STUDENTS, CLASSES } = require('../../constants');
 
-const jane = {
-	name: 'Jane Doe',
-	email: 'jane@email.com',
-	password: 'P455w0rd'
-};
-
-const max = {
-	name: 'Max',
-	email: 'max@email.com'
-};
-
-const may = {
-	name: 'May',
-	email: 'may@email.com'
-};
-
-const computing = {
-	title: 'Computing'
-};
-
-const math = {
-	title: 'Math'
-};
-
-// TODO: Shift commented validation tests to actions
+const { JOHN, JANE } = TEACHERS;
+const { MAX, MAY } = STUDENTS;
+const { COMPUTING, MATH } = CLASSES;
 
 describe('Data Access Object: Register', function() {
 	beforeEach(function() {
 		return db.migrate
 			.rollback()
-			.then(() => db.migrate.latest())
-			.then(() => db.seed.run());
+			.then(function() {
+				return db.migrate.latest();
+			})
+			.then(function() {
+				return db.seed.run();
+			});
 	});
 
 	afterEach(function() {
@@ -61,12 +39,12 @@ describe('Data Access Object: Register', function() {
 	context('createById', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return classDAO.create(computing);
+					return classDAO.create(COMPUTING);
 				});
 		});
 
@@ -124,9 +102,9 @@ describe('Data Access Object: Register', function() {
 
 		it('should register in a many-to-many relationship between teachers and students', function() {
 			return teacherDAO
-				.create(jane)
+				.create(JANE)
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -277,20 +255,20 @@ describe('Data Access Object: Register', function() {
 	context('createByEmail', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return classDAO.create(computing);
+					return classDAO.create(COMPUTING);
 				});
 		});
 
 		it('should register a student to a teacher with class, returning id', function() {
 			return registerDAO
 				.createByEmail({
-					teacherEmail: john.email,
-					studentEmail: max.email,
+					teacherEmail: JOHN.email,
+					studentEmail: MAX.email,
 					classId: 1
 				})
 				.then(function(id) {
@@ -318,7 +296,7 @@ describe('Data Access Object: Register', function() {
 
 		it('should register a student to a teacher without class, returning id', function() {
 			return registerDAO
-				.createByEmail({ teacherEmail: john.email, studentEmail: max.email })
+				.createByEmail({ teacherEmail: JOHN.email, studentEmail: MAX.email })
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
@@ -344,14 +322,14 @@ describe('Data Access Object: Register', function() {
 
 		it('should register in a many-to-many relationship between teachers and students', function() {
 			return teacherDAO
-				.create(jane)
+				.create(JANE)
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
 					return registerDAO.createByEmail({
-						teacherEmail: john.email,
-						studentEmail: max.email
+						teacherEmail: JOHN.email,
+						studentEmail: MAX.email
 					});
 				})
 				.then(function(id) {
@@ -371,8 +349,8 @@ describe('Data Access Object: Register', function() {
 							class_id: null
 						});
 					return registerDAO.createByEmail({
-						teacherEmail: john.email,
-						studentEmail: may.email
+						teacherEmail: JOHN.email,
+						studentEmail: MAY.email
 					});
 				})
 				.then(function(id) {
@@ -392,8 +370,8 @@ describe('Data Access Object: Register', function() {
 							class_id: null
 						});
 					return registerDAO.createByEmail({
-						teacherEmail: jane.email,
-						studentEmail: max.email
+						teacherEmail: JANE.email,
+						studentEmail: MAX.email
 					});
 				})
 				.then(function(id) {
@@ -417,13 +395,13 @@ describe('Data Access Object: Register', function() {
 
 		it('should NOT register if teacher does not exist', function() {
 			return registerDAO
-				.createByEmail({ teacherEmail: jane.email, studentEmail: max.email })
+				.createByEmail({ teacherEmail: JANE.email, studentEmail: MAX.email })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher (email: ${jane.email}) does not exist.`
+						`The teacher (email: ${JANE.email}) does not exist.`
 					);
 					return db('registers')
 						.where({ id: 1 })
@@ -436,13 +414,13 @@ describe('Data Access Object: Register', function() {
 
 		it('should NOT register if student does not exist', function() {
 			return registerDAO
-				.createByEmail({ teacherEmail: john.email, studentEmail: may.email })
+				.createByEmail({ teacherEmail: JOHN.email, studentEmail: MAY.email })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The student (email: ${may.email}) does not exist.`
+						`The student (email: ${MAY.email}) does not exist.`
 					);
 					return db('registers')
 						.where({ id: 1 })
@@ -456,8 +434,8 @@ describe('Data Access Object: Register', function() {
 		it('should NOT register if class is provided but does not exist', function() {
 			return registerDAO
 				.createByEmail({
-					teacherEmail: john.email,
-					studentEmail: max.email,
+					teacherEmail: JOHN.email,
+					studentEmail: MAX.email,
 					classId: 2
 				})
 				.catch(function(error) {
@@ -476,14 +454,14 @@ describe('Data Access Object: Register', function() {
 		it('should NOT register if an identical registration already exists', function() {
 			return registerDAO
 				.createByEmail({
-					teacherEmail: john.email,
-					studentEmail: max.email,
+					teacherEmail: JOHN.email,
+					studentEmail: MAX.email,
 					classId: 1
 				})
 				.then(function() {
 					return registerDAO.createByEmail({
-						teacherEmail: john.email,
-						studentEmail: max.email,
+						teacherEmail: JOHN.email,
+						studentEmail: MAX.email,
 						classId: 1
 					});
 				})
@@ -495,15 +473,15 @@ describe('Data Access Object: Register', function() {
 						'The register (teacher id: 1, student id: 1, class id: 1) already exists. Please use a different and unique register.'
 					);
 					return registerDAO.createByEmail({
-						teacherEmail: john.email,
-						studentEmail: max.email
+						teacherEmail: JOHN.email,
+						studentEmail: MAX.email
 					});
 				})
 				.then(function(id) {
 					expect(id).to.equal(2);
 					return registerDAO.createByEmail({
-						teacherEmail: john.email,
-						studentEmail: max.email
+						teacherEmail: JOHN.email,
+						studentEmail: MAX.email
 					});
 				})
 				.catch(function(error) {
@@ -517,10 +495,12 @@ describe('Data Access Object: Register', function() {
 		});
 	});
 
+	// TODO: Test non-strict transactable create
+
 	context('getById', function() {
 		beforeEach(function() {
-			return teacherDAO.create(john).then(function() {
-				return studentDAO.create(max);
+			return teacherDAO.create(JOHN).then(function() {
+				return studentDAO.create(MAX);
 			});
 		});
 
@@ -553,15 +533,15 @@ describe('Data Access Object: Register', function() {
 	context('getByTeacherId', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return teacherDAO.create(jane);
+					return teacherDAO.create(JANE);
 				})
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -635,15 +615,15 @@ describe('Data Access Object: Register', function() {
 	context('getByTeacherEmail', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return teacherDAO.create(jane);
+					return teacherDAO.create(JANE);
 				})
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -657,7 +637,7 @@ describe('Data Access Object: Register', function() {
 			return registerDAO
 				.createById({ teacherId: 2, studentId: 1 })
 				.then(function() {
-					return registerDAO.getByTeacherEmail({ teacherEmail: john.email });
+					return registerDAO.getByTeacherEmail({ teacherEmail: JOHN.email });
 				})
 				.then(function(result) {
 					expect(result)
@@ -677,7 +657,7 @@ describe('Data Access Object: Register', function() {
 							student_id: 2,
 							class_id: null
 						});
-					return registerDAO.getByTeacherEmail({ teacherEmail: jane.email });
+					return registerDAO.getByTeacherEmail({ teacherEmail: JANE.email });
 				})
 				.then(function(result) {
 					expect(result)
@@ -695,7 +675,7 @@ describe('Data Access Object: Register', function() {
 
 		it('should return empty array if no matching register is found', function() {
 			return registerDAO
-				.getByTeacherEmail({ teacherEmail: jane.email })
+				.getByTeacherEmail({ teacherEmail: JANE.email })
 				.then(function(result) {
 					expect(result)
 						.to.be.an('array')
@@ -705,13 +685,13 @@ describe('Data Access Object: Register', function() {
 
 		it('should NOT return if teacher does not exist', function() {
 			return registerDAO
-				.getByTeacherEmail({ teacherEmail: may.email })
+				.getByTeacherEmail({ teacherEmail: MAY.email })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher (email: ${may.email}) does not exist.`
+						`The teacher (email: ${MAY.email}) does not exist.`
 					);
 				});
 		});
@@ -720,15 +700,15 @@ describe('Data Access Object: Register', function() {
 	context('getByStudentId', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return teacherDAO.create(jane);
+					return teacherDAO.create(JANE);
 				})
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -802,15 +782,15 @@ describe('Data Access Object: Register', function() {
 	context('getByStudentEmail', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return teacherDAO.create(jane);
+					return teacherDAO.create(JANE);
 				})
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -824,7 +804,7 @@ describe('Data Access Object: Register', function() {
 			return registerDAO
 				.createById({ teacherId: 1, studentId: 2 })
 				.then(function() {
-					return registerDAO.getByStudentEmail({ studentEmail: max.email });
+					return registerDAO.getByStudentEmail({ studentEmail: MAX.email });
 				})
 				.then(function(result) {
 					expect(result)
@@ -844,7 +824,7 @@ describe('Data Access Object: Register', function() {
 							student_id: 1,
 							class_id: null
 						});
-					return registerDAO.getByStudentEmail({ studentEmail: may.email });
+					return registerDAO.getByStudentEmail({ studentEmail: MAY.email });
 				})
 				.then(function(result) {
 					expect(result)
@@ -862,7 +842,7 @@ describe('Data Access Object: Register', function() {
 
 		it('should return empty array if no matching register is found', function() {
 			return registerDAO
-				.getByStudentEmail({ studentEmail: may.email })
+				.getByStudentEmail({ studentEmail: MAY.email })
 				.then(function(result) {
 					expect(result)
 						.to.be.an('array')
@@ -872,13 +852,13 @@ describe('Data Access Object: Register', function() {
 
 		it('should NOT return if student does not exist', function() {
 			return registerDAO
-				.getByStudentEmail({ studentEmail: jane.email })
+				.getByStudentEmail({ studentEmail: JANE.email })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The student (email: ${jane.email}) does not exist.`
+						`The student (email: ${JANE.email}) does not exist.`
 					);
 				});
 		});
@@ -887,18 +867,18 @@ describe('Data Access Object: Register', function() {
 	context('getByClass', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
-					return classDAO.create(computing);
+					return classDAO.create(COMPUTING);
 				})
 				.then(function() {
-					return classDAO.create(math);
+					return classDAO.create(MATH);
 				})
 				.then(function() {
 					return registerDAO.createById({
@@ -976,12 +956,12 @@ describe('Data Access Object: Register', function() {
 	context('setTeacherById', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return teacherDAO.create(jane);
+					return teacherDAO.create(JANE);
 				})
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -1050,12 +1030,12 @@ describe('Data Access Object: Register', function() {
 	context('setTeacherByEmail', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return teacherDAO.create(jane);
+					return teacherDAO.create(JANE);
 				})
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -1064,7 +1044,7 @@ describe('Data Access Object: Register', function() {
 
 		it('should update teacher of register, returning id', function() {
 			return registerDAO
-				.setTeacherByEmail({ id: 1, teacherEmail: jane.email })
+				.setTeacherByEmail({ id: 1, teacherEmail: JANE.email })
 				.then(function(id) {
 					expect(id).to.equal(1);
 					return registerDAO.getById({ id });
@@ -1085,7 +1065,7 @@ describe('Data Access Object: Register', function() {
 
 		it('should NOT update if register does not exist', function() {
 			return registerDAO
-				.setTeacherByEmail({ id: 2, teacherEmail: jane.email })
+				.setTeacherByEmail({ id: 2, teacherEmail: JANE.email })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
@@ -1095,13 +1075,13 @@ describe('Data Access Object: Register', function() {
 
 		it('should NOT update if teacher does not exist', function() {
 			return registerDAO
-				.setTeacherByEmail({ id: 1, teacherEmail: may.email })
+				.setTeacherByEmail({ id: 1, teacherEmail: MAY.email })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher (email: ${may.email}) does not exist.`
+						`The teacher (email: ${MAY.email}) does not exist.`
 					);
 				});
 		});
@@ -1113,7 +1093,7 @@ describe('Data Access Object: Register', function() {
 					expect(id).to.equal(2);
 					return registerDAO.setTeacherByEmail({
 						id: 1,
-						teacherEmail: jane.email
+						teacherEmail: JANE.email
 					});
 				})
 				.catch(function(error) {
@@ -1130,12 +1110,12 @@ describe('Data Access Object: Register', function() {
 	context('setStudentById', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -1204,12 +1184,12 @@ describe('Data Access Object: Register', function() {
 	context('setStudentByEmail', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -1218,7 +1198,7 @@ describe('Data Access Object: Register', function() {
 
 		it('should update student of register, returning id', function() {
 			return registerDAO
-				.setStudentByEmail({ id: 1, studentEmail: may.email })
+				.setStudentByEmail({ id: 1, studentEmail: MAY.email })
 				.then(function(id) {
 					expect(id).to.equal(1);
 					return registerDAO.getById({ id });
@@ -1239,7 +1219,7 @@ describe('Data Access Object: Register', function() {
 
 		it('should NOT update if register does not exist', function() {
 			return registerDAO
-				.setStudentByEmail({ id: 2, studentEmail: may.email })
+				.setStudentByEmail({ id: 2, studentEmail: MAY.email })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
@@ -1249,13 +1229,13 @@ describe('Data Access Object: Register', function() {
 
 		it('should NOT update if student does not exist', function() {
 			return registerDAO
-				.setStudentByEmail({ id: 1, studentEmail: jane.email })
+				.setStudentByEmail({ id: 1, studentEmail: JANE.email })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The student (email: ${jane.email}) does not exist.`
+						`The student (email: ${JANE.email}) does not exist.`
 					);
 				});
 		});
@@ -1267,7 +1247,7 @@ describe('Data Access Object: Register', function() {
 					expect(id).to.equal(2);
 					return registerDAO.setStudentByEmail({
 						id: 1,
-						studentEmail: may.email
+						studentEmail: MAY.email
 					});
 				})
 				.catch(function(error) {
@@ -1284,15 +1264,15 @@ describe('Data Access Object: Register', function() {
 	context('setClass', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return classDAO.create(computing);
+					return classDAO.create(COMPUTING);
 				})
 				.then(function() {
-					return classDAO.create(math);
+					return classDAO.create(MATH);
 				})
 				.then(function() {
 					return registerDAO.createById({
@@ -1361,9 +1341,9 @@ describe('Data Access Object: Register', function() {
 	context('deleteById', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -1401,15 +1381,15 @@ describe('Data Access Object: Register', function() {
 	context('deleteByTeacherId', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return teacherDAO.create(jane);
+					return teacherDAO.create(JANE);
 				})
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -1492,15 +1472,15 @@ describe('Data Access Object: Register', function() {
 	context('deleteByTeacherEmail', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return teacherDAO.create(jane);
+					return teacherDAO.create(JANE);
 				})
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -1514,7 +1494,7 @@ describe('Data Access Object: Register', function() {
 			return registerDAO
 				.createById({ teacherId: 2, studentId: 1 })
 				.then(function() {
-					return registerDAO.deleteByTeacherEmail({ teacherEmail: john.email });
+					return registerDAO.deleteByTeacherEmail({ teacherEmail: JOHN.email });
 				})
 				.then(function(registers) {
 					expect(registers)
@@ -1561,7 +1541,7 @@ describe('Data Access Object: Register', function() {
 
 		it('should NOT delete, returning empty array if no matches found', function() {
 			return registerDAO
-				.deleteByTeacherEmail({ teacherEmail: jane.email })
+				.deleteByTeacherEmail({ teacherEmail: JANE.email })
 				.then(function(registers) {
 					expect(registers)
 						.to.be.an('array')
@@ -1571,13 +1551,13 @@ describe('Data Access Object: Register', function() {
 
 		it('should NOT delete if teacher does not exist', function() {
 			return registerDAO
-				.deleteByTeacherEmail({ teacherEmail: may.email })
+				.deleteByTeacherEmail({ teacherEmail: MAY.email })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher (email: ${may.email}) does not exist.`
+						`The teacher (email: ${MAY.email}) does not exist.`
 					);
 				});
 		});
@@ -1586,15 +1566,15 @@ describe('Data Access Object: Register', function() {
 	context('deleteByStudentId', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return teacherDAO.create(jane);
+					return teacherDAO.create(JANE);
 				})
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -1677,15 +1657,15 @@ describe('Data Access Object: Register', function() {
 	context('deleteByStudentEmail', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return teacherDAO.create(jane);
+					return teacherDAO.create(JANE);
 				})
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
 					return registerDAO.createById({ teacherId: 1, studentId: 1 });
@@ -1699,7 +1679,7 @@ describe('Data Access Object: Register', function() {
 			return registerDAO
 				.createById({ teacherId: 1, studentId: 2 })
 				.then(function() {
-					return registerDAO.deleteByStudentEmail({ studentEmail: max.email });
+					return registerDAO.deleteByStudentEmail({ studentEmail: MAX.email });
 				})
 				.then(function(registers) {
 					expect(registers)
@@ -1746,7 +1726,7 @@ describe('Data Access Object: Register', function() {
 
 		it('should NOT delete, returning empty array if no matches found', function() {
 			return registerDAO
-				.deleteByStudentEmail({ studentEmail: may.email })
+				.deleteByStudentEmail({ studentEmail: MAY.email })
 				.then(function(registers) {
 					expect(registers)
 						.to.be.an('array')
@@ -1756,13 +1736,13 @@ describe('Data Access Object: Register', function() {
 
 		it('should NOT delete if student does not exist', function() {
 			return registerDAO
-				.deleteByStudentEmail({ studentEmail: jane.email })
+				.deleteByStudentEmail({ studentEmail: JANE.email })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The student (email: ${jane.email}) does not exist.`
+						`The student (email: ${JANE.email}) does not exist.`
 					);
 				});
 		});
@@ -1771,21 +1751,21 @@ describe('Data Access Object: Register', function() {
 	context('deleteByClass', function() {
 		beforeEach(function() {
 			return teacherDAO
-				.create(john)
+				.create(JOHN)
 				.then(function() {
-					return teacherDAO.create(jane);
+					return teacherDAO.create(JANE);
 				})
 				.then(function() {
-					return studentDAO.create(max);
+					return studentDAO.create(MAX);
 				})
 				.then(function() {
-					return studentDAO.create(may);
+					return studentDAO.create(MAY);
 				})
 				.then(function() {
-					return classDAO.create(computing);
+					return classDAO.create(COMPUTING);
 				})
 				.then(function() {
-					return classDAO.create(math);
+					return classDAO.create(MATH);
 				})
 				.then(function() {
 					return registerDAO.createById({
@@ -1870,4 +1850,10 @@ describe('Data Access Object: Register', function() {
 			});
 		});
 	});
+
+	// TODO: Test get distinct students by teacher
+
+	// TODO: Test get common students by teachers
+
+	// TODO: Test bulk register
 });

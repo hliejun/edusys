@@ -9,42 +9,46 @@ const {
 	handle
 } = require('../../utils/errors');
 
-const teachers = require('./teacher');
-const students = require('./student');
-const classes = require('./class');
+const teacherDAO = require('./teacher');
+const studentDAO = require('./student');
+const classDAO = require('./class');
+
+const { PRECISION_TIMESTAMP } = require('../../constants');
+
+const TABLE_REGISTER = 'registers';
 
 const db = knex(config);
 
-const PRECISION_TIMESTAMP = 6;
-
 /* Creators */
 
-const checkIfExist = ({ teacherId, studentId, classId }) =>
-	db('registers')
+const selectByIds = ({ teacherId, studentId, classId }) =>
+	db(TABLE_REGISTER)
 		.where({
 			teacher_id: teacherId,
 			student_id: studentId,
 			class_id: classId || null
 		})
-		.select()
-		.then(result => {
-			if (result && result.length > 0) {
-				return Promise.reject(
-					new UniqueConstraintError(
-						'register',
-						`teacher id: ${teacherId}, student id: ${studentId}, class id: ${classId ||
-							null}`
-					)
-				);
-			}
-			return Promise.resolve(false);
-		});
+		.first();
+
+const checkIfExist = ({ teacherId, studentId, classId }) =>
+	selectByIds({ teacherId, studentId, classId }).then(register => {
+		if (register != null) {
+			return Promise.reject(
+				new UniqueConstraintError(
+					'register',
+					`teacher id: ${teacherId}, student id: ${studentId}, class id: ${classId ||
+						null}`
+				)
+			);
+		}
+		return Promise.resolve(false);
+	});
 
 const create = ({ teacherId, studentId, classId }) =>
 	checkIfExist({ teacherId, studentId, classId })
 		.then(entryExists => {
 			if (!entryExists) {
-				return db('registers').insert({
+				return db(TABLE_REGISTER).insert({
 					teacher_id: teacherId,
 					student_id: studentId,
 					class_id: classId || null
@@ -62,24 +66,24 @@ const create = ({ teacherId, studentId, classId }) =>
 		});
 
 const createById = ({ teacherId, studentId, classId }) =>
-	teachers
+	teacherDAO
 		.getById({ id: teacherId })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
-			return students.getById({ id: studentId });
+			return studentDAO.getById({ id: studentId });
 		})
-		.then(result => {
-			if (result == null) {
+		.then(student => {
+			if (student == null) {
 				return Promise.reject(new NotFoundError(`student (id: ${studentId})`));
 			}
 			return classId == null
 				? Promise.resolve(null)
-				: classes.getById({ id: classId });
+				: classDAO.getById({ id: classId });
 		})
-		.then(result => {
-			if (classId != null && result == null) {
+		.then(classroom => {
+			if (classId != null && classroom == null) {
 				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
 			return create({ teacherId, studentId, classId });
@@ -92,35 +96,35 @@ const createById = ({ teacherId, studentId, classId }) =>
 		);
 
 const createByEmail = ({ teacherEmail, studentEmail, classId }) =>
-	teachers
+	teacherDAO
 		.getByEmail({ email: teacherEmail })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(
 					new NotFoundError(`teacher (email: ${teacherEmail})`)
 				);
 			}
 			return Promise.all([
-				Promise.resolve(result.id),
-				students.getByEmail({ email: studentEmail })
+				Promise.resolve(teacher.id),
+				studentDAO.getByEmail({ email: studentEmail })
 			]);
 		})
-		.then(([teacherId, result]) => {
-			if (result == null) {
+		.then(([teacherId, student]) => {
+			if (student == null) {
 				return Promise.reject(
 					new NotFoundError(`student (email: ${studentEmail})`)
 				);
 			}
 			return Promise.all([
 				Promise.resolve(teacherId),
-				Promise.resolve(result.id),
+				Promise.resolve(student.id),
 				classId == null
 					? Promise.resolve(null)
-					: classes.getById({ id: classId })
+					: classDAO.getById({ id: classId })
 			]);
 		})
-		.then(([teacherId, studentId, result]) => {
-			if (classId != null && result == null) {
+		.then(([teacherId, studentId, classroom]) => {
+			if (classId != null && classroom == null) {
 				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
 			return create({ teacherId, studentId, classId });
@@ -134,29 +138,24 @@ const createByEmail = ({ teacherEmail, studentEmail, classId }) =>
 
 // TODO: Add non-strict transactable create
 
-// TODO: Add bulk create (using transactions)
-
-// TODO: Add non-strict bulk create
-
 /* Readers */
 
 const getById = ({ id }) =>
-	db('registers')
+	db(TABLE_REGISTER)
 		.where({ id })
 		.first()
 		.catch(error => handle(error, `finding register (id: ${id})`));
 
 const selectByTeacherId = ({ teacherId }) =>
-	db('registers')
+	db(TABLE_REGISTER)
 		.where({ teacher_id: teacherId })
 		.select();
 
 const getByTeacherId = ({ teacherId }) =>
-	db('teachers')
-		.where({ id: teacherId })
-		.first()
-		.then(result => {
-			if (result == null) {
+	teacherDAO
+		.getById({ id: teacherId })
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
 			return selectByTeacherId({ teacherId });
@@ -166,30 +165,30 @@ const getByTeacherId = ({ teacherId }) =>
 		);
 
 const getByTeacherEmail = ({ teacherEmail }) =>
-	teachers
+	teacherDAO
 		.getByEmail({ email: teacherEmail })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(
 					new NotFoundError(`teacher (email: ${teacherEmail})`)
 				);
 			}
-			return selectByTeacherId({ teacherId: result.id });
+			return selectByTeacherId({ teacherId: teacher.id });
 		})
 		.catch(error =>
 			handle(error, `finding registers (teacher email: ${teacherEmail})`)
 		);
 
 const selectByStudentId = ({ studentId }) =>
-	db('registers')
+	db(TABLE_REGISTER)
 		.where({ student_id: studentId })
 		.select();
 
 const getByStudentId = ({ studentId }) =>
-	students
+	studentDAO
 		.getById({ id: studentId })
-		.then(result => {
-			if (result == null) {
+		.then(student => {
+			if (student == null) {
 				return Promise.reject(new NotFoundError(`student (id: ${studentId})`));
 			}
 			return selectByStudentId({ studentId });
@@ -199,28 +198,28 @@ const getByStudentId = ({ studentId }) =>
 		);
 
 const getByStudentEmail = ({ studentEmail }) =>
-	students
+	studentDAO
 		.getByEmail({ email: studentEmail })
-		.then(result => {
-			if (result == null) {
+		.then(student => {
+			if (student == null) {
 				return Promise.reject(
 					new NotFoundError(`student (email: ${studentEmail})`)
 				);
 			}
-			return selectByStudentId({ studentId: result.id });
+			return selectByStudentId({ studentId: student.id });
 		})
 		.catch(error =>
 			handle(error, `finding registers (student email: ${studentEmail})`)
 		);
 
 const getByClass = ({ classId }) =>
-	classes
+	classDAO
 		.getById({ id: classId })
-		.then(result => {
-			if (result == null) {
+		.then(classroom => {
+			if (classroom == null) {
 				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
-			return db('registers')
+			return db(TABLE_REGISTER)
 				.where({ class_id: classId })
 				.select();
 		})
@@ -229,7 +228,7 @@ const getByClass = ({ classId }) =>
 /* Updaters */
 
 const setTeacherId = ({ id, teacherId }) =>
-	db('registers')
+	db(TABLE_REGISTER)
 		.where({ id })
 		.update({
 			teacher_id: teacherId,
@@ -238,19 +237,19 @@ const setTeacherId = ({ id, teacherId }) =>
 
 const setTeacherById = ({ id, teacherId }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(register => {
+			if (register == null) {
 				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
 			return checkIfExist({
 				teacherId,
-				studentId: result['student_id'],
-				classId: result['class_id']
+				studentId: register['student_id'],
+				classId: register['class_id']
 			});
 		})
-		.then(() => teachers.getById({ id: teacherId }))
-		.then(result => {
-			if (result == null) {
+		.then(() => teacherDAO.getById({ id: teacherId }))
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
 			return setTeacherId({ id, teacherId });
@@ -264,13 +263,13 @@ const setTeacherById = ({ id, teacherId }) =>
 
 const setTeacherByEmail = ({ id, teacherEmail }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(register => {
+			if (register == null) {
 				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
 			return Promise.all([
-				Promise.resolve(result),
-				teachers.getByEmail({ email: teacherEmail })
+				Promise.resolve(register),
+				teacherDAO.getByEmail({ email: teacherEmail })
 			]);
 		})
 		.then(([register, teacher]) => {
@@ -297,7 +296,7 @@ const setTeacherByEmail = ({ id, teacherEmail }) =>
 		);
 
 const setStudentId = ({ id, studentId }) =>
-	db('registers')
+	db(TABLE_REGISTER)
 		.where({ id })
 		.update({
 			student_id: studentId,
@@ -306,19 +305,19 @@ const setStudentId = ({ id, studentId }) =>
 
 const setStudentById = ({ id, studentId }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(register => {
+			if (register == null) {
 				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
 			return checkIfExist({
-				teacherId: result['teacher_id'],
+				teacherId: register['teacher_id'],
 				studentId,
-				classId: result['class_id']
+				classId: register['class_id']
 			});
 		})
-		.then(() => students.getById({ id: studentId }))
-		.then(result => {
-			if (result == null) {
+		.then(() => studentDAO.getById({ id: studentId }))
+		.then(student => {
+			if (student == null) {
 				return Promise.reject(new NotFoundError(`student (id: ${studentId})`));
 			}
 			return setStudentId({ id, studentId });
@@ -332,13 +331,13 @@ const setStudentById = ({ id, studentId }) =>
 
 const setStudentByEmail = ({ id, studentEmail }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(register => {
+			if (register == null) {
 				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
 			return Promise.all([
-				Promise.resolve(result),
-				students.getByEmail({ email: studentEmail })
+				Promise.resolve(register),
+				studentDAO.getByEmail({ email: studentEmail })
 			]);
 		})
 		.then(([register, student]) => {
@@ -366,25 +365,25 @@ const setStudentByEmail = ({ id, studentEmail }) =>
 
 const setClass = ({ id, classId }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(register => {
+			if (register == null) {
 				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
 			return checkIfExist({
-				teacherId: result['teacher_id'],
-				studentId: result['student_id'],
+				teacherId: register['teacher_id'],
+				studentId: register['student_id'],
 				classId
 			});
 		})
-		.then(() => classes.getById({ id: classId }))
-		.then(result => {
-			if (result == null) {
+		.then(() => classDAO.getById({ id: classId }))
+		.then(classroom => {
+			if (classroom == null) {
 				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
-			return db('registers')
+			return db(TABLE_REGISTER)
 				.where({ id })
 				.update({
-					class_id: result.id,
+					class_id: classroom.id,
 					updated_at: db.fn.now(PRECISION_TIMESTAMP)
 				});
 		})
@@ -399,178 +398,171 @@ const setClass = ({ id, classId }) =>
 
 const deleteById = ({ id }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(register => {
+			if (register == null) {
 				return Promise.reject(new NotFoundError(`register (id: ${id})`));
 			}
 			return Promise.all([
-				Promise.resolve(result),
-				db('registers')
+				Promise.resolve(register),
+				db(TABLE_REGISTER)
 					.where({ id })
 					.del()
 			]);
 		})
-		.then(([result]) => {
-			return Promise.resolve(result);
+		.then(([register]) => {
+			return Promise.resolve(register);
 		})
 		.catch(error => handle(error, `deleting register (id: ${id})`));
 
-// TODO: Use transactions for bulk delete
-
 const deleteByTeacher = ({ teacherId }) =>
-	db('registers')
+	db(TABLE_REGISTER)
 		.where({ teacher_id: teacherId })
 		.del();
 
 const deleteByTeacherId = ({ teacherId }) =>
-	teachers
+	teacherDAO
 		.getById({ id: teacherId })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
 			return selectByTeacherId({ teacherId });
 		})
-		.then(result =>
+		.then(registers =>
 			Promise.all([
-				Promise.resolve(result || []),
-				result == null || result.length === 0
+				Promise.resolve(registers || []),
+				registers == null || registers.length === 0
 					? Promise.resolve(false)
 					: deleteByTeacher({ teacherId })
 			])
 		)
-		.then(([result]) => {
-			return Promise.resolve(result);
+		.then(([registers]) => {
+			return Promise.resolve(registers);
 		})
 		.catch(error =>
 			handle(error, `deleting registers (teacher id: ${teacherId})`)
 		);
 
 const deleteByTeacherEmail = ({ teacherEmail }) =>
-	teachers
+	teacherDAO
 		.getByEmail({ email: teacherEmail })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(
 					new NotFoundError(`teacher (email: ${teacherEmail})`)
 				);
 			}
 			return Promise.all([
-				Promise.resolve(result.id),
-				selectByTeacherId({ teacherId: result.id })
+				Promise.resolve(teacher.id),
+				selectByTeacherId({ teacherId: teacher.id })
 			]);
 		})
-		.then(([teacherId, result]) =>
+		.then(([teacherId, registers]) =>
 			Promise.all([
-				Promise.resolve(result || []),
-				result == null || result.length === 0
+				Promise.resolve(registers || []),
+				registers == null || registers.length === 0
 					? Promise.resolve(false)
 					: deleteByTeacher({ teacherId })
 			])
 		)
-		.then(([result]) => {
-			return Promise.resolve(result);
+		.then(([registers]) => {
+			return Promise.resolve(registers);
 		})
 		.catch(error =>
 			handle(error, `deleting registers (teacher email: ${teacherEmail})`)
 		);
 
 const deleteByStudent = ({ studentId }) =>
-	db('registers')
+	db(TABLE_REGISTER)
 		.where({ student_id: studentId })
 		.del();
 
 const deleteByStudentId = ({ studentId }) =>
-	students
+	studentDAO
 		.getById({ id: studentId })
-		.then(result => {
-			if (result == null) {
+		.then(student => {
+			if (student == null) {
 				return Promise.reject(new NotFoundError(`student (id: ${studentId})`));
 			}
 			return selectByStudentId({ studentId });
 		})
-		.then(result =>
+		.then(registers =>
 			Promise.all([
-				Promise.resolve(result || []),
-				result == null || result.length === 0
+				Promise.resolve(registers || []),
+				registers == null || registers.length === 0
 					? Promise.resolve(false)
 					: deleteByStudent({ studentId })
 			])
 		)
-		.then(([result]) => {
-			return Promise.resolve(result);
+		.then(([registers]) => {
+			return Promise.resolve(registers);
 		})
 		.catch(error =>
 			handle(error, `deleting registers (student id: ${studentId})`)
 		);
 
 const deleteByStudentEmail = ({ studentEmail }) =>
-	students
+	studentDAO
 		.getByEmail({ email: studentEmail })
-		.then(result => {
-			if (result == null) {
+		.then(student => {
+			if (student == null) {
 				return Promise.reject(
 					new NotFoundError(`student (email: ${studentEmail})`)
 				);
 			}
 			return Promise.all([
-				Promise.resolve(result.id),
-				selectByStudentId({ studentId: result.id })
+				Promise.resolve(student.id),
+				selectByStudentId({ studentId: student.id })
 			]);
 		})
-		.then(([studentId, result]) =>
+		.then(([studentId, registers]) =>
 			Promise.all([
-				Promise.resolve(result || []),
-				result == null || result.length === 0
+				Promise.resolve(registers || []),
+				registers == null || registers.length === 0
 					? Promise.resolve(false)
 					: deleteByStudent({ studentId })
 			])
 		)
-		.then(([result]) => {
-			return Promise.resolve(result);
+		.then(([registers]) => {
+			return Promise.resolve(registers);
 		})
 		.catch(error =>
 			handle(error, `deleting registers (student email: ${studentEmail})`)
 		);
 
 const deleteByClass = ({ classId }) =>
-	classes
+	classDAO
 		.getById({ id: classId })
-		.then(result => {
-			if (result == null) {
+		.then(classroom => {
+			if (classroom == null) {
 				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
-			return db('registers')
+			return db(TABLE_REGISTER)
 				.where({ class_id: classId })
 				.select();
 		})
-		.then(result =>
+		.then(registers =>
 			Promise.all([
-				Promise.resolve(result || []),
-				result == null || result.length === 0
+				Promise.resolve(registers || []),
+				registers == null || registers.length === 0
 					? Promise.resolve(false)
-					: db('registers')
+					: db(TABLE_REGISTER)
 						.where({ class_id: classId })
 						.del()
 			])
 		)
-		.then(([result]) => {
-			return Promise.resolve(result);
+		.then(([registers]) => {
+			return Promise.resolve(registers);
 		})
 		.catch(error => handle(error, `deleting registers (class id: ${classId})`));
 
 /* Auxillary Actions */
 
-// get teachers by student
-// get teachers by class
+// TODO: Get distinct students by teacher
 
-// get students by class
-// get students by teacher
+// TODO: Get common students by teachers
 
-// get classes by teacher
-// get classes by student
-
-// get common students by teachers
+// TODO: Bulk register
 
 module.exports = {
 	createById,

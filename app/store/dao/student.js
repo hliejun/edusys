@@ -37,8 +37,6 @@ const create = ({ name, email }) =>
 
 // TODO: Add non-strict transactable create
 
-// TODO: Add non-strict transactable bulk create
-
 const bulkCreate = students =>
 	db.transaction(transaction => {
 		const creations = students.map(student =>
