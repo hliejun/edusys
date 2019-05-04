@@ -111,9 +111,202 @@ describe('Data Access Object: Student', function() {
 		});
 	});
 
-	// TODO: Test non-strict transactable create
+	context('createIfNotExists', function() {
+		beforeEach(function() {
+			return studentDAO.create(MAX);
+		});
 
-	// TODO: Test non-strict transactable bulk create
+		it('should create student if not exists, returning id', function() {
+			return studentDAO
+				.createIfNotExists(MAY)
+				.then(function(id) {
+					expect(id)
+						.to.be.a('number')
+						.that.equals(2);
+					return studentDAO.getById({ id });
+				})
+				.then(function(student) {
+					expect(student)
+						.to.be.an('object')
+						.that.includes({
+							name: MAY.name,
+							email: MAY.email,
+							is_suspended: false
+						});
+				});
+		});
+
+		it('should create student with email username if none is provided, returning id', function() {
+			return studentDAO
+				.createIfNotExists({ email: MAY.email })
+				.then(function(id) {
+					expect(id)
+						.to.be.a('number')
+						.that.equals(2);
+					return studentDAO.getById({ id });
+				})
+				.then(function(student) {
+					expect(student)
+						.to.be.an('object')
+						.that.includes({
+							name: 'may',
+							email: MAY.email,
+							is_suspended: false
+						});
+				});
+		});
+
+		it('should NOT create if student exists, returning id', function() {
+			return studentDAO
+				.createIfNotExists(MAX)
+				.then(function(id) {
+					expect(id)
+						.to.be.a('number')
+						.that.equals(1);
+					return studentDAO.getById({ id: 2 });
+				})
+				.then(function(teacher) {
+					expect(teacher).to.be.an('undefined');
+				});
+		});
+
+		it('should create student in a transaction, returning id', function() {
+			const students = [{ email: MAY.email }, { email: MATT.email }];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all(
+						students.map(function(student) {
+							return studentDAO.createIfNotExists(student, transaction);
+						})
+					);
+				})
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(2)
+						.that.contains.members([2, 3]);
+					return studentDAO.getByIds(ids);
+				})
+				.then(function(students) {
+					expect(students).to.containSubset([
+						{
+							name: 'may',
+							email: MAY.email
+						},
+						{
+							name: 'matt',
+							email: MATT.email
+						}
+					]);
+				});
+		});
+
+		it('should create only one instance if duplicate emails are used in transaction, returning same ids', function() {
+			const students = [
+				{ email: MAY.email },
+				{ email: MATT.email },
+				{ email: MAY.email }
+			];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all(
+						students.map(function(student) {
+							return studentDAO.createIfNotExists(student, transaction);
+						})
+					);
+				})
+				.then(function(ids) {
+					const uniqueIds = [...new Set(ids)];
+					expect(ids)
+						.to.be.an('array')
+						.of.length(3);
+					expect(uniqueIds)
+						.to.be.an('array')
+						.of.length(2)
+						.that.contains.members([2, 3]);
+					return studentDAO.getByIds(uniqueIds);
+				})
+				.then(function(students) {
+					expect(students).to.containSubset([
+						{
+							name: 'may',
+							email: MAY.email
+						},
+						{
+							name: 'matt',
+							email: MATT.email
+						}
+					]);
+				});
+		});
+
+		it('should NOT create student in a transaction if student exists, returning id', function() {
+			const students = [
+				{ email: MAX.email },
+				{ email: MAY.email },
+				{ email: MATT.email }
+			];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all(
+						students.map(function(student) {
+							return studentDAO.createIfNotExists(student, transaction);
+						})
+					);
+				})
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(3)
+						.that.contains.members([1, 2, 3]);
+					return studentDAO.getByIds(ids);
+				})
+				.then(function(teachers) {
+					expect(teachers).to.containSubset([
+						{
+							id: 1,
+							name: MAX.name,
+							email: MAX.email
+						},
+						{
+							name: 'may',
+							email: MAY.email
+						},
+						{
+							name: 'matt',
+							email: MATT.email
+						}
+					]);
+				});
+		});
+
+		it('should NOT create student in a transaction if an error is thrown', function() {
+			const errorMessage =
+				'Simulating an error thrown within transaction boundary';
+			const students = [{ email: MAY.email }, { email: MATT.email }];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all([
+						...students.map(function(student) {
+							return studentDAO.createIfNotExists(student, transaction);
+						})
+					]).then(function() {
+						return Promise.reject(new Error(errorMessage));
+					});
+				})
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(Error, errorMessage);
+					return studentDAO.getByIds([2, 3]);
+				})
+				.then(function(students) {
+					expect(students)
+						.to.be.an('array')
+						.of.length(0);
+				});
+		});
+	});
 
 	context('bulkCreate', function() {
 		beforeEach(function() {

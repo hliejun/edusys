@@ -11,21 +11,15 @@ const {
 } = require('../../utils/errors');
 
 const { encryptPassword, comparePassword } = require('../../utils/crypto');
+const { getNameFromEmail } = require('../../utils/parser');
 
 const { PRECISION_TIMESTAMP } = require('../../constants');
 
 const TABLE_TEACHER = 'teachers';
 const DEFAULT_PASSWORD = 'password';
-const DEFAULT_NAME_TEACHER = 'admin';
+const DEFAULT_NAME_TEACHER = 'teacher';
 
 const db = knex(config);
-
-/* Utils */
-
-const getNameFromEmail = email => {
-	const chunks = email.split('@');
-	return chunks[0] || DEFAULT_NAME_TEACHER;
-};
 
 /* Creators */
 
@@ -72,7 +66,7 @@ const createIfNotExists = ({ email, name, password }, transaction) => {
 			return table
 				.insert({
 					email,
-					name: name || getNameFromEmail(email),
+					name: name || getNameFromEmail(email) || DEFAULT_NAME_TEACHER,
 					password: hash
 				})
 				.into(TABLE_TEACHER);

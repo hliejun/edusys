@@ -9,9 +9,12 @@ const {
 	handle
 } = require('../../utils/errors');
 
+const { getNameFromEmail } = require('../../utils/parser');
+
 const { PRECISION_TIMESTAMP } = require('../../constants');
 
 const TABLE_STUDENT = 'students';
+const DEFAULT_NAME_STUDENT = 'student';
 
 const db = knex(config);
 
@@ -35,7 +38,40 @@ const create = ({ name, email }) =>
 			return handle(error, `creating student (name: ${name}, email: ${email})`);
 		});
 
-// TODO: Add non-strict transactable create
+const createIfNotExists = ({ email, name }, transaction) => {
+	const table = transaction || db;
+	return table
+		.from(TABLE_STUDENT)
+		.where({ email })
+		.first('id')
+		.then(student => {
+			if (student && student.id != null) {
+				return Promise.resolve([student.id]);
+			}
+			return table
+				.insert({
+					email,
+					name: name || getNameFromEmail(email) || DEFAULT_NAME_STUDENT
+				})
+				.into(TABLE_STUDENT);
+		})
+		.then(ids => {
+			if (ids == null || ids.length === 0 || ids[0] == null) {
+				return Promise.reject(new MalformedResponseError('id of student', ids));
+			}
+			return Promise.resolve(ids[0]);
+		})
+		.catch(error => {
+			if (error.code === 'ER_DUP_ENTRY') {
+				return table
+					.from(TABLE_STUDENT)
+					.where({ email })
+					.first('id')
+					.then(student => Promise.resolve(student.id));
+			}
+			return handle(error, `creating student (email: ${email})`);
+		});
+};
 
 const bulkCreate = students =>
 	db.transaction(transaction => {
@@ -185,6 +221,7 @@ const deleteByEmail = ({ email }) =>
 
 module.exports = {
 	create,
+	createIfNotExists,
 	bulkCreate,
 	getById,
 	getByIds,
