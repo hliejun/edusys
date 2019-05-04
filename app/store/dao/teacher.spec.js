@@ -10,6 +10,7 @@ const { TEACHERS } = require('../../constants');
 const { ALICE, BOB, JOHN, JANE } = TEACHERS;
 
 chai.use(require('chai-datetime'));
+chai.use(require('chai-subset'));
 
 const assert = chai.assert;
 const expect = chai.expect;
@@ -118,7 +119,208 @@ describe('Data Access Object: Teacher', function() {
 		});
 	});
 
-	// TODO: Test non-strict transactable create
+	context('createIfNotExists', function() {
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should create teacher if not exists, returning id', function() {
+			return teacherDAO
+				.createIfNotExists(JANE)
+				.then(function(id) {
+					expect(id)
+						.to.be.a('number')
+						.that.equals(2);
+					return teacherDAO.getById({ id });
+				})
+				.then(function(teacher) {
+					expect(teacher)
+						.to.be.an('object')
+						.that.includes({
+							name: JANE.name,
+							email: JANE.email
+						});
+					return bcrypt.compare(JANE.password, teacher.password);
+				})
+				.then(function(isMatchingPassword) {
+					assert.isTrue(isMatchingPassword);
+				});
+		});
+
+		it('should create teacher with email username and default password if none is provided, returning id', function() {
+			return teacherDAO
+				.createIfNotExists({ email: JANE.email })
+				.then(function(id) {
+					expect(id)
+						.to.be.a('number')
+						.that.equals(2);
+					return teacherDAO.getById({ id });
+				})
+				.then(function(teacher) {
+					expect(teacher)
+						.to.be.an('object')
+						.that.includes({
+							name: 'jane',
+							email: JANE.email
+						});
+					return bcrypt.compare('password', teacher.password);
+				})
+				.then(function(isMatchingPassword) {
+					assert.isTrue(isMatchingPassword);
+				});
+		});
+
+		it('should NOT create if teacher exists, returning id', function() {
+			return teacherDAO
+				.createIfNotExists(JOHN)
+				.then(function(id) {
+					expect(id)
+						.to.be.a('number')
+						.that.equals(1);
+					return teacherDAO.getById({ id: 2 });
+				})
+				.then(function(teacher) {
+					expect(teacher).to.be.an('undefined');
+				});
+		});
+
+		it('should create teacher in a transaction, returning id', function() {
+			const teachers = [{ email: JANE.email }, { email: BOB.email }];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all(
+						teachers.map(function(teacher) {
+							return teacherDAO.createIfNotExists(teacher, transaction);
+						})
+					);
+				})
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(2)
+						.that.contains.members([2, 3]);
+					return teacherDAO.getByIds(ids);
+				})
+				.then(function(teachers) {
+					expect(teachers).to.containSubset([
+						{
+							name: 'jane',
+							email: JANE.email
+						},
+						{
+							name: 'bob',
+							email: BOB.email
+						}
+					]);
+				});
+		});
+
+		it('should create only one instance if duplicate emails are used in transaction, returning same ids', function() {
+			const teachers = [
+				{ email: JANE.email },
+				{ email: BOB.email },
+				{ email: JANE.email }
+			];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all(
+						teachers.map(function(teacher) {
+							return teacherDAO.createIfNotExists(teacher, transaction);
+						})
+					);
+				})
+				.then(function(ids) {
+					const uniqueIds = [...new Set(ids)];
+					expect(ids)
+						.to.be.an('array')
+						.of.length(3);
+					expect(uniqueIds)
+						.to.be.an('array')
+						.of.length(2)
+						.that.contains.members([2, 3]);
+					return teacherDAO.getByIds(uniqueIds);
+				})
+				.then(function(teachers) {
+					expect(teachers).to.containSubset([
+						{
+							name: 'jane',
+							email: JANE.email
+						},
+						{
+							name: 'bob',
+							email: BOB.email
+						}
+					]);
+				});
+		});
+
+		it('should NOT create teacher in a transaction if teacher exists, returning id', function() {
+			const teachers = [
+				{ email: JOHN.email },
+				{ email: JANE.email },
+				{ email: BOB.email }
+			];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all(
+						teachers.map(function(teacher) {
+							return teacherDAO.createIfNotExists(teacher, transaction);
+						})
+					);
+				})
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(3)
+						.that.contains.members([1, 2, 3]);
+					return teacherDAO.getByIds(ids);
+				})
+				.then(function(teachers) {
+					expect(teachers).to.containSubset([
+						{
+							id: 1,
+							name: JOHN.name,
+							email: JOHN.email
+						},
+						{
+							name: 'jane',
+							email: JANE.email
+						},
+						{
+							name: 'bob',
+							email: BOB.email
+						}
+					]);
+				});
+		});
+
+		it('should NOT create teacher in a transaction if an error is thrown', function() {
+			const errorMessage =
+				'Simulating an error thrown within transaction boundary';
+			const teachers = [{ email: JANE.email }, { email: BOB.email }];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all([
+						...teachers.map(function(teacher) {
+							return teacherDAO.createIfNotExists(teacher, transaction);
+						})
+					]).then(function() {
+						return Promise.reject(new Error(errorMessage));
+					});
+				})
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(Error, errorMessage);
+					return teacherDAO.getByIds([2, 3]);
+				})
+				.then(function(teachers) {
+					expect(teachers)
+						.to.be.an('array')
+						.of.length(0);
+				});
+		});
+	});
 
 	context('bulkCreate', function() {
 		beforeEach(function() {

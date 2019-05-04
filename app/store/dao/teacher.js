@@ -15,8 +15,17 @@ const { encryptPassword, comparePassword } = require('../../utils/crypto');
 const { PRECISION_TIMESTAMP } = require('../../constants');
 
 const TABLE_TEACHER = 'teachers';
+const DEFAULT_PASSWORD = 'password';
+const DEFAULT_NAME_TEACHER = 'admin';
 
 const db = knex(config);
+
+/* Utils */
+
+const getNameFromEmail = email => {
+	const chunks = email.split('@');
+	return chunks[0] || DEFAULT_NAME_TEACHER;
+};
 
 /* Creators */
 
@@ -44,7 +53,47 @@ const create = ({ name, email, password }) =>
 			return handle(error, `creating teacher (name: ${name}, email: ${email})`);
 		});
 
-// TODO: Add non-strict transactable create
+const createIfNotExists = ({ email, name, password }, transaction) => {
+	const table = transaction || db;
+	return table
+		.from(TABLE_TEACHER)
+		.where({ email })
+		.first('id')
+		.then(teacher =>
+			Promise.all([
+				Promise.resolve(teacher),
+				encryptPassword(password || DEFAULT_PASSWORD)
+			])
+		)
+		.then(([teacher, hash]) => {
+			if (teacher && teacher.id != null) {
+				return Promise.resolve([teacher.id]);
+			}
+			return table
+				.insert({
+					email,
+					name: name || getNameFromEmail(email),
+					password: hash
+				})
+				.into(TABLE_TEACHER);
+		})
+		.then(ids => {
+			if (ids == null || ids.length === 0 || ids[0] == null) {
+				return Promise.reject(new MalformedResponseError('id of teacher', ids));
+			}
+			return Promise.resolve(ids[0]);
+		})
+		.catch(error => {
+			if (error.code === 'ER_DUP_ENTRY') {
+				return table
+					.from(TABLE_TEACHER)
+					.where({ email })
+					.first('id')
+					.then(teacher => Promise.resolve(teacher.id));
+			}
+			return handle(error, `creating teacher (email: ${email})`);
+		});
+};
 
 const bulkCreate = teachers =>
 	db.transaction(transaction => {
@@ -219,6 +268,7 @@ const validate = ({ email, password }) =>
 
 module.exports = {
 	create,
+	createIfNotExists,
 	bulkCreate,
 	getById,
 	getByIds,
