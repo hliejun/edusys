@@ -643,11 +643,36 @@ const deleteByClass = ({ classId }) =>
 
 /* Auxillary Actions */
 
-// TODO: Get distinct students by teacher
+const getStudentsOfTeacher = ({ teacherId }) =>
+	teacherDAO
+		.getById({ id: teacherId })
+		.then(teacher => {
+			if (teacher == null) {
+				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
+			}
+			return db(TABLE_REGISTER)
+				.distinct('student_id')
+				.where('teacher_id', teacherId);
+		})
+		.then(students =>
+			Promise.resolve(students.map(student => student['student_id']))
+		);
 
-// TODO: Get common students by teachers
-
-// TODO: Bulk register
+const getStudentsOfTeachers = teacherIds =>
+	Promise.all(
+		teacherIds.map(teacherId => getStudentsOfTeacher({ teacherId }))
+	).then(studentsByTeachers => {
+		const classCount = studentsByTeachers.reduce((multiset, studentIds) => {
+			studentIds.forEach(studentId => {
+				multiset[studentId] = (multiset[studentId] || 0) + 1;
+			});
+			return multiset;
+		}, {});
+		const commonIds = Object.keys(classCount).filter(
+			studentId => classCount[studentId] === teacherIds.length
+		);
+		return Promise.resolve(commonIds.map(studentId => parseInt(studentId)));
+	});
 
 module.exports = {
 	createById,
@@ -670,5 +695,7 @@ module.exports = {
 	deleteByTeacherEmail,
 	deleteByStudentId,
 	deleteByStudentEmail,
-	deleteByClass
+	deleteByClass,
+	getStudentsOfTeacher,
+	getStudentsOfTeachers
 };

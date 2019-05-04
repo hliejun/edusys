@@ -17,9 +17,9 @@ const db = knex(config);
 
 const { TEACHERS, STUDENTS, CLASSES } = require('../../constants');
 
-const { JOHN, JANE } = TEACHERS;
-const { MAX, MAY } = STUDENTS;
-const { COMPUTING, MATH } = CLASSES;
+const { JOHN, JANE, BOB } = TEACHERS;
+const { MAX, MAY, MATT } = STUDENTS;
+const { COMPUTING, MATH, PHYSICS } = CLASSES;
 
 describe('Data Access Object: Register', function() {
 	beforeEach(function() {
@@ -2213,9 +2213,188 @@ describe('Data Access Object: Register', function() {
 		});
 	});
 
-	// TODO: Test get distinct students by teacher
+	context('getStudentsOfTeacher', function() {
+		beforeEach(function() {
+			return teacherDAO
+				.bulkCreate([JOHN, JANE, BOB])
+				.then(function() {
+					return studentDAO.bulkCreate([MAX, MAY, MATT]);
+				})
+				.then(function() {
+					return classDAO.create(COMPUTING);
+				})
+				.then(function() {
+					return classDAO.create(MATH);
+				})
+				.then(function() {
+					return classDAO.create(PHYSICS);
+				})
+				.then(function() {
+					return registerDAO.createById({
+						teacherId: 1,
+						studentId: 1,
+						classId: 1
+					});
+				})
+				.then(function() {
+					return registerDAO.createById({
+						teacherId: 1,
+						studentId: 2,
+						classId: 1
+					});
+				})
+				.then(function() {
+					return registerDAO.createById({
+						teacherId: 2,
+						studentId: 1,
+						classId: 2
+					});
+				})
+				.then(function() {
+					return registerDAO.createById({
+						teacherId: 2,
+						studentId: 3,
+						classId: 2
+					});
+				})
+				.then(function() {
+					return registerDAO.createById({
+						teacherId: 1,
+						studentId: 1,
+						classId: 3
+					});
+				});
+		});
 
-	// TODO: Test get common students by teachers
+		it('should read distinct students of a teacher, returning array of student ids', function() {
+			return registerDAO
+				.getStudentsOfTeacher({ teacherId: 1 })
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(2);
+					expect(ids).to.have.members([1, 2]);
+					return registerDAO.getStudentsOfTeacher({ teacherId: 2 });
+				})
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(2);
+					expect(ids).to.have.members([1, 3]);
+					return registerDAO.getStudentsOfTeacher({ teacherId: 3 });
+				})
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(0);
+				});
+		});
 
-	// TODO: Test bulk register
+		it('should NOT read if teacher with matching id does not exist', function() {
+			return registerDAO
+				.getStudentsOfTeacher({ teacherId: 4 })
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(Error, 'The teacher (id: 4) does not exist.');
+				});
+		});
+	});
+
+	context('getStudentsOfTeachers', function() {
+		beforeEach(function() {
+			return teacherDAO
+				.bulkCreate([JOHN, JANE, BOB])
+				.then(function() {
+					return studentDAO.bulkCreate([MAX, MAY, MATT]);
+				})
+				.then(function() {
+					return classDAO.create(COMPUTING);
+				})
+				.then(function() {
+					return classDAO.create(MATH);
+				})
+				.then(function() {
+					return classDAO.create(PHYSICS);
+				})
+				.then(function() {
+					return registerDAO.createById({
+						teacherId: 1,
+						studentId: 1,
+						classId: 1
+					});
+				})
+				.then(function() {
+					return registerDAO.createById({
+						teacherId: 1,
+						studentId: 2,
+						classId: 1
+					});
+				})
+				.then(function() {
+					return registerDAO.createById({
+						teacherId: 2,
+						studentId: 1,
+						classId: 2
+					});
+				})
+				.then(function() {
+					return registerDAO.createById({
+						teacherId: 2,
+						studentId: 3,
+						classId: 2
+					});
+				})
+				.then(function() {
+					return registerDAO.createById({
+						teacherId: 1,
+						studentId: 1,
+						classId: 3
+					});
+				});
+		});
+
+		it('should get common students by an array of teachers, returning array of student ids', function() {
+			return registerDAO
+				.getStudentsOfTeachers([1])
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(2);
+					expect(ids).to.have.members([1, 2]);
+					return registerDAO.getStudentsOfTeachers([2]);
+				})
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(2);
+					expect(ids).to.have.members([1, 3]);
+					return registerDAO.getStudentsOfTeachers([1, 2]);
+				})
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(1);
+					expect(ids).to.have.members([1]);
+				});
+		});
+
+		it('should return empty array if no common students are found', function() {
+			return registerDAO.getStudentsOfTeachers([3]).then(function(ids) {
+				expect(ids)
+					.to.be.an('array')
+					.of.length(0);
+			});
+		});
+
+		it('should NOT read if teacher with matching id does not exist', function() {
+			return registerDAO
+				.getStudentsOfTeachers([1, 2, 4])
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(Error, 'The teacher (id: 4) does not exist.');
+				});
+		});
+	});
 });

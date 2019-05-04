@@ -46,6 +46,9 @@ const CLASSES = {
 	},
 	MATH: {
 		title: 'MA1101R: Linear Algebra'
+	},
+	PHYSICS: {
+		title: 'PC1201S: Quantum Physics'
 	}
 };
 
