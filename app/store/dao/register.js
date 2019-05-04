@@ -15,6 +15,9 @@ const classDAO = require('./class');
 
 const { PRECISION_TIMESTAMP } = require('../../constants');
 
+const TABLE_TEACHER = 'teachers';
+const TABLE_STUDENT = 'students';
+const TABLE_CLASS = 'classes';
 const TABLE_REGISTER = 'registers';
 
 const db = knex(config);
@@ -136,7 +139,83 @@ const createByEmail = ({ teacherEmail, studentEmail, classId }) =>
 			)
 		);
 
-// TODO: Add non-strict transactable create
+const createIfNotExists = ({ teacherId, studentId, classId }, transaction) => {
+	const table = transaction || db;
+	return table
+		.from(TABLE_TEACHER)
+		.where({ id: teacherId })
+		.first('id')
+		.then(teacher => {
+			if (!teacher || teacher.id == null) {
+				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
+			}
+			return table
+				.from(TABLE_STUDENT)
+				.where({ id: studentId })
+				.first('id');
+		})
+		.then(student => {
+			if (!student || student.id == null) {
+				return Promise.reject(new NotFoundError(`student (id: ${studentId})`));
+			}
+			return classId == null
+				? Promise.resolve()
+				: table
+					.from(TABLE_CLASS)
+					.where({ id: classId })
+					.first('id');
+		})
+		.then(classroom => {
+			if (classId != null && (!classroom || classroom.id == null)) {
+				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
+			}
+			return table
+				.from(TABLE_REGISTER)
+				.where({
+					teacher_id: teacherId,
+					student_id: studentId,
+					class_id: classId || null
+				})
+				.first('id');
+		})
+		.then(register => {
+			if (register && register.id != null) {
+				return Promise.resolve([register.id]);
+			}
+			return table
+				.insert({
+					teacher_id: teacherId,
+					student_id: studentId,
+					class_id: classId || null
+				})
+				.into(TABLE_REGISTER);
+		})
+		.then(ids => {
+			if (ids == null || ids.length === 0 || ids[0] == null) {
+				return Promise.reject(
+					new MalformedResponseError('id of register', ids)
+				);
+			}
+			return Promise.resolve(ids[0]);
+		})
+		.catch(error => {
+			if (error.code === 'ER_DUP_ENTRY') {
+				return table
+					.from(TABLE_REGISTER)
+					.where({
+						teacher_id: teacherId,
+						student_id: studentId,
+						class_id: classId || null
+					})
+					.first('id')
+					.then(register => Promise.resolve(register.id));
+			}
+			return handle(
+				error,
+				`creating register (teacher id: ${teacherId}, student id: ${studentId}, class id: ${classId})`
+			);
+		});
+};
 
 /* Readers */
 
@@ -145,6 +224,12 @@ const getById = ({ id }) =>
 		.where({ id })
 		.first()
 		.catch(error => handle(error, `finding register (id: ${id})`));
+
+const getByIds = ids =>
+	db(TABLE_REGISTER)
+		.whereIn('id', ids)
+		.select()
+		.catch(error => handle(error, `finding registers (ids: ${ids})`));
 
 const selectByTeacherId = ({ teacherId }) =>
 	db(TABLE_REGISTER)
@@ -567,7 +652,9 @@ const deleteByClass = ({ classId }) =>
 module.exports = {
 	createById,
 	createByEmail,
+	createIfNotExists,
 	getById,
+	getByIds,
 	getByTeacherId,
 	getByTeacherEmail,
 	getByStudentId,

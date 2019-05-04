@@ -9,6 +9,7 @@ const studentDAO = require('./student');
 const classDAO = require('./class');
 
 chai.use(require('chai-datetime'));
+chai.use(require('chai-subset'));
 
 const expect = chai.expect;
 
@@ -495,7 +496,322 @@ describe('Data Access Object: Register', function() {
 		});
 	});
 
-	// TODO: Test non-strict transactable create
+	context('createIfNotExists', function() {
+		beforeEach(function() {
+			return teacherDAO
+				.create(JOHN)
+				.then(function() {
+					return teacherDAO.create(JANE);
+				})
+				.then(function() {
+					return studentDAO.create(MAX);
+				})
+				.then(function() {
+					return studentDAO.create(MAY);
+				})
+				.then(function() {
+					return classDAO.create(COMPUTING);
+				})
+				.then(function() {
+					return classDAO.create(MATH);
+				})
+				.then(function() {
+					return registerDAO.createByEmail({
+						teacherEmail: JOHN.email,
+						studentEmail: MAX.email,
+						classId: 1
+					});
+				})
+				.then(function() {
+					return registerDAO.createByEmail({
+						teacherEmail: JOHN.email,
+						studentEmail: MAY.email,
+						classId: 1
+					});
+				})
+				.then(function() {
+					return registerDAO.createByEmail({
+						teacherEmail: JANE.email,
+						studentEmail: MAX.email,
+						classId: 2
+					});
+				});
+		});
+
+		it('should create register if not exists, returning id', function() {
+			return registerDAO
+				.createIfNotExists({
+					teacherId: 2,
+					studentId: 2,
+					classId: 2
+				})
+				.then(function(id) {
+					expect(id)
+						.to.be.a('number')
+						.that.equals(4);
+					return registerDAO.getById({ id });
+				})
+				.then(function(register) {
+					expect(register)
+						.to.be.an('object')
+						.that.includes({
+							teacher_id: 2,
+							student_id: 2,
+							class_id: 2
+						});
+				});
+		});
+
+		it('should create register without class if not exists, returning id', function() {
+			return registerDAO
+				.createIfNotExists({
+					teacherId: 2,
+					studentId: 2
+				})
+				.then(function(id) {
+					expect(id)
+						.to.be.a('number')
+						.that.equals(4);
+					return registerDAO.getById({ id });
+				})
+				.then(function(register) {
+					expect(register)
+						.to.be.an('object')
+						.that.includes({
+							teacher_id: 2,
+							student_id: 2,
+							class_id: null
+						});
+				});
+		});
+
+		it('should NOT create if identical register exists, returning id', function() {
+			return registerDAO
+				.createIfNotExists({
+					teacherId: 2,
+					studentId: 1,
+					classId: 2
+				})
+				.then(function(id) {
+					expect(id)
+						.to.be.a('number')
+						.that.equals(3);
+					return registerDAO.getById({ id: 4 });
+				})
+				.then(function(register) {
+					expect(register).to.be.an('undefined');
+				});
+		});
+
+		it('should NOT create if teacher does not exists', function() {
+			return registerDAO
+				.createIfNotExists({
+					teacherId: 3,
+					studentId: 2,
+					classId: 2
+				})
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(Error, 'The teacher (id: 3) does not exist.');
+					return registerDAO.getById({ id: 4 });
+				})
+				.then(function(register) {
+					expect(register).to.be.an('undefined');
+				});
+		});
+
+		it('should NOT create if student does not exists', function() {
+			return registerDAO
+				.createIfNotExists({
+					teacherId: 2,
+					studentId: 3,
+					classId: 2
+				})
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(Error, 'The student (id: 3) does not exist.');
+					return registerDAO.getById({ id: 4 });
+				})
+				.then(function(register) {
+					expect(register).to.be.an('undefined');
+				});
+		});
+
+		it('should NOT create if class is defined but does not exists', function() {
+			return registerDAO
+				.createIfNotExists({
+					teacherId: 2,
+					studentId: 2,
+					classId: 3
+				})
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(Error, 'The class (id: 3) does not exist.');
+					return registerDAO.getById({ id: 4 });
+				})
+				.then(function(register) {
+					expect(register).to.be.an('undefined');
+				});
+		});
+
+		it('should create register in a transaction, returning id', function() {
+			const registers = [
+				{
+					teacherId: 2,
+					studentId: 2,
+					classId: 1
+				},
+				{
+					teacherId: 2,
+					studentId: 2,
+					classId: 2
+				}
+			];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all(
+						registers.map(function(register) {
+							return registerDAO.createIfNotExists(register, transaction);
+						})
+					);
+				})
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(2)
+						.that.contains.members([4, 5]);
+					return registerDAO.getByIds(ids);
+				})
+				.then(function(registers) {
+					expect(registers).to.containSubset([
+						{
+							teacher_id: 2,
+							student_id: 2,
+							class_id: 1
+						},
+						{
+							teacher_id: 2,
+							student_id: 2,
+							class_id: 2
+						}
+					]);
+				});
+		});
+
+		it('should create only one instance if there are duplicates in transaction, returning same ids', function() {
+			const registers = [
+				{
+					teacherId: 2,
+					studentId: 2,
+					classId: 1
+				},
+				{
+					teacherId: 2,
+					studentId: 2,
+					classId: 1
+				}
+			];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all(
+						registers.map(function(register) {
+							return registerDAO.createIfNotExists(register, transaction);
+						})
+					);
+				})
+				.then(function(ids) {
+					const uniqueIds = [...new Set(ids)];
+					expect(ids)
+						.to.be.an('array')
+						.of.length(2);
+					expect(uniqueIds)
+						.to.be.an('array')
+						.of.length(1)
+						.that.contains.members([4]);
+					return registerDAO.getByIds(uniqueIds);
+				})
+				.then(function(registers) {
+					expect(registers).to.containSubset([
+						{
+							teacher_id: 2,
+							student_id: 2,
+							class_id: 1
+						}
+					]);
+					return registerDAO.getById({ id: 5 });
+				})
+				.then(function(register) {
+					expect(register).to.be.an('undefined');
+				});
+		});
+
+		it('should NOT create register in a transaction if an identical one exists, returning id', function() {
+			const registers = [
+				{
+					teacherId: 2,
+					studentId: 2,
+					classId: 1
+				},
+				{
+					teacherId: 1,
+					studentId: 1,
+					classId: 1
+				}
+			];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all(
+						registers.map(function(register) {
+							return registerDAO.createIfNotExists(register, transaction);
+						})
+					);
+				})
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(2)
+						.that.contains.members([4, 1]);
+					return registerDAO.getById({ id: 5 });
+				})
+				.then(function(register) {
+					expect(register).to.be.an('undefined');
+				});
+		});
+
+		it('should NOT create registers in a transaction if an error is thrown', function() {
+			const errorMessage =
+				'Simulating an error thrown within transaction boundary';
+			const registers = [
+				{
+					teacherId: 2,
+					studentId: 2,
+					classId: 1
+				}
+			];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all([
+						...registers.map(function(register) {
+							return registerDAO.createIfNotExists(register, transaction);
+						})
+					]).then(function() {
+						return Promise.reject(new Error(errorMessage));
+					});
+				})
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(Error, errorMessage);
+					return registerDAO.getById({ id: 4 });
+				})
+				.then(function(register) {
+					expect(register).to.be.an('undefined');
+				});
+		});
+	});
 
 	context('getById', function() {
 		beforeEach(function() {
@@ -526,6 +842,52 @@ describe('Data Access Object: Register', function() {
 				expect(function() {
 					throw error;
 				}).to.throw(Error, 'The register (id: 1) does not exist.');
+			});
+		});
+	});
+
+	context('getByIds', function() {
+		beforeEach(function() {
+			return teacherDAO
+				.create(JOHN)
+				.then(function() {
+					return studentDAO.create(MAX);
+				})
+				.then(function() {
+					return classDAO.create(COMPUTING);
+				})
+				.then(function() {
+					return registerDAO.createById({
+						teacherId: 1,
+						studentId: 1
+					});
+				})
+				.then(function() {
+					return registerDAO.createById({
+						teacherId: 1,
+						studentId: 1,
+						classId: 1
+					});
+				});
+		});
+
+		it('should read registers with matching ids, returning array of attributes', function() {
+			return registerDAO.getByIds([1, 2, 3]).then(function(registers) {
+				expect(registers)
+					.to.be.an('array')
+					.of.length(2);
+				expect(registers).to.containSubset([
+					{ teacher_id: 1, student_id: 1, class_id: null },
+					{ teacher_id: 1, student_id: 1, class_id: 1 }
+				]);
+			});
+		});
+
+		it('should return an empty array if register with matching id does not exist', function() {
+			return registerDAO.getByIds([4, 5]).then(function(registers) {
+				expect(registers)
+					.to.be.an('array')
+					.of.length(0);
 			});
 		});
 	});

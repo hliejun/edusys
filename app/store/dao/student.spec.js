@@ -9,6 +9,7 @@ const { STUDENTS } = require('../../constants');
 const { MALICE, MATT, MAX, MAY } = STUDENTS;
 
 chai.use(require('chai-datetime'));
+chai.use(require('chai-subset'));
 
 const assert = chai.assert;
 const expect = chai.expect;

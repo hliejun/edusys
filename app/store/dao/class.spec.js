@@ -9,6 +9,7 @@ const { CLASSES } = require('../../constants');
 const { COMPUTING, MATH } = CLASSES;
 
 chai.use(require('chai-datetime'));
+chai.use(require('chai-subset'));
 
 const assert = chai.assert;
 const expect = chai.expect;

@@ -22,6 +22,7 @@ module.exports.up = function(knex, Promise) {
 			.inTable('classes')
 			// .notNullable() // currently accepts relations independent of classes
 			.onDelete('cascade');
+		table.unique(['teacher_id', 'student_id', 'class_id']);
 		table
 			.dateTime('created_at', { precision: 6 })
 			.notNullable()
