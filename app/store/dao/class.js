@@ -35,7 +35,35 @@ const create = ({ title }) =>
 			return handle(error, `creating class (title: ${title})`);
 		});
 
-// TODO: Add non-strict transactable create
+const createIfNotExists = ({ title }, transaction) => {
+	const table = transaction || db;
+	return table
+		.from(TABLE_CLASS)
+		.where({ title })
+		.first('id')
+		.then(classroom => {
+			if (classroom && classroom.id != null) {
+				return Promise.resolve([classroom.id]);
+			}
+			return table.insert({ title }).into(TABLE_CLASS);
+		})
+		.then(ids => {
+			if (ids == null || ids.length === 0 || ids[0] == null) {
+				return Promise.reject(new MalformedResponseError('id of class', ids));
+			}
+			return Promise.resolve(ids[0]);
+		})
+		.catch(error => {
+			if (error.code === 'ER_DUP_ENTRY') {
+				return table
+					.from(TABLE_CLASS)
+					.where({ title })
+					.first('id')
+					.then(classroom => Promise.resolve(classroom.id));
+			}
+			return handle(error, `creating class (title: ${title})`);
+		});
+};
 
 /* Readers */
 
@@ -45,13 +73,23 @@ const getById = ({ id }) =>
 		.first()
 		.catch(error => handle(error, `finding class (id: ${id})`));
 
+const getByIds = ids =>
+	db(TABLE_CLASS)
+		.whereIn('id', ids)
+		.select()
+		.catch(error => handle(error, `finding classes (ids: ${ids})`));
+
 const getByTitle = ({ title }) =>
 	db(TABLE_CLASS)
 		.where({ title })
 		.first()
 		.catch(error => handle(error, `finding class (title: ${title})`));
 
-// FIXME: Add bulk read
+const getByTitles = titles =>
+	db(TABLE_CLASS)
+		.whereIn('title', titles)
+		.select()
+		.catch(error => handle(error, `finding classes (titles: ${titles})`));
 
 /* Updaters */
 
@@ -110,8 +148,11 @@ const deleteByTitle = ({ title }) =>
 
 module.exports = {
 	create,
+	createIfNotExists,
 	getById,
+	getByIds,
 	getByTitle,
+	getByTitles,
 	setTitle,
 	deleteById,
 	deleteByTitle

@@ -107,7 +107,149 @@ describe('Data Access Object: Class', function() {
 		});
 	});
 
-	// TODO: Test non-strict transactable create
+	context('createIfNotExists', function() {
+		beforeEach(function() {
+			return classDAO.create(COMPUTING);
+		});
+
+		it('should create class if not exists, returning id', function() {
+			return classDAO
+				.createIfNotExists(MATH)
+				.then(function(id) {
+					expect(id)
+						.to.be.a('number')
+						.that.equals(2);
+					return classDAO.getById({ id });
+				})
+				.then(function(classroom) {
+					expect(classroom)
+						.to.be.an('object')
+						.that.includes({
+							title: MATH.title
+						});
+				});
+		});
+
+		it('should NOT create if class exists, returning id', function() {
+			return classDAO
+				.createIfNotExists(COMPUTING)
+				.then(function(id) {
+					expect(id)
+						.to.be.a('number')
+						.that.equals(1);
+					return classDAO.getById({ id: 2 });
+				})
+				.then(function(classroom) {
+					expect(classroom).to.be.an('undefined');
+				});
+		});
+
+		it('should create class in a transaction, returning id', function() {
+			const classes = [COMPUTING, MATH];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all(
+						classes.map(function(classroom) {
+							return classDAO.createIfNotExists(classroom, transaction);
+						})
+					);
+				})
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(2)
+						.that.contains.members([1, 2]);
+					return classDAO.getByIds(ids);
+				})
+				.then(function(classrooms) {
+					expect(classrooms).to.containSubset([COMPUTING, MATH]);
+				});
+		});
+
+		it('should create only one instance if duplicate titles are used in transaction, returning same ids', function() {
+			const classes = [MATH, MATH];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all(
+						classes.map(function(classroom) {
+							return classDAO.createIfNotExists(classroom, transaction);
+						})
+					);
+				})
+				.then(function(ids) {
+					const uniqueIds = [...new Set(ids)];
+					expect(ids)
+						.to.be.an('array')
+						.of.length(2);
+					expect(uniqueIds)
+						.to.be.an('array')
+						.of.length(1)
+						.that.contains.members([2]);
+					return classDAO.getByIds(uniqueIds);
+				})
+				.then(function(classrooms) {
+					expect(classrooms).to.containSubset([MATH]);
+				});
+		});
+
+		it('should NOT create class in a transaction if class exists, returning id', function() {
+			const classes = [COMPUTING, MATH];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all(
+						classes.map(function(classroom) {
+							return classDAO.createIfNotExists(classroom, transaction);
+						})
+					);
+				})
+				.then(function(ids) {
+					expect(ids)
+						.to.be.an('array')
+						.of.length(2)
+						.that.contains.members([1, 2]);
+					return classDAO.getByIds(ids);
+				})
+				.then(function(classrooms) {
+					expect(classrooms).to.containSubset([
+						{
+							id: 1,
+							title: COMPUTING.title
+						},
+						{
+							id: 2,
+							title: MATH.title
+						}
+					]);
+				});
+		});
+
+		it('should NOT create classes in a transaction if an error is thrown', function() {
+			const errorMessage =
+				'Simulating an error thrown within transaction boundary';
+			const classes = [MATH];
+			return db
+				.transaction(function(transaction) {
+					return Promise.all([
+						...classes.map(function(classroom) {
+							return classDAO.createIfNotExists(classroom, transaction);
+						})
+					]).then(function() {
+						return Promise.reject(new Error(errorMessage));
+					});
+				})
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(Error, errorMessage);
+					return classDAO.getByIds([2]);
+				})
+				.then(function(classrooms) {
+					expect(classrooms)
+						.to.be.an('array')
+						.of.length(0);
+				});
+		});
+	});
 
 	context('getById', function() {
 		beforeEach(function() {
@@ -128,6 +270,31 @@ describe('Data Access Object: Class', function() {
 		it('should return "undefined" if class with matching id does not exist', function() {
 			return classDAO.getById({ id: 2 }).then(function(classroom) {
 				expect(classroom).to.be.an('undefined');
+			});
+		});
+	});
+
+	context('getByIds', function() {
+		beforeEach(function() {
+			return classDAO.create(COMPUTING).then(function() {
+				return classDAO.create(MATH);
+			});
+		});
+
+		it('should read class with matching ids, returning array of attributes', function() {
+			return classDAO.getByIds([1, 2, 3]).then(function(classes) {
+				expect(classes)
+					.to.be.an('array')
+					.of.length(2);
+				expect(classes).to.containSubset([COMPUTING, MATH]);
+			});
+		});
+
+		it('should return an empty array if class with matching id does not exist', function() {
+			return classDAO.getByIds([4, 5]).then(function(classes) {
+				expect(classes)
+					.to.be.an('array')
+					.of.length(0);
 			});
 		});
 	});
@@ -162,7 +329,34 @@ describe('Data Access Object: Class', function() {
 		});
 	});
 
-	// FIXME: Add bulk read test
+	context('getByTitles', function() {
+		beforeEach(function() {
+			return classDAO.create(COMPUTING).then(function() {
+				return classDAO.create(MATH);
+			});
+		});
+
+		it('should read classes with matching titles, returning array of attributes', function() {
+			return classDAO
+				.getByTitles([COMPUTING.title, MATH.title])
+				.then(function(classes) {
+					expect(classes)
+						.to.be.an('array')
+						.of.length(2);
+					expect(classes).to.containSubset([COMPUTING, MATH]);
+				});
+		});
+
+		it('should return an empty array if class with matching email does not exist', function() {
+			return classDAO
+				.getByTitles(['Physics', 'Economics'])
+				.then(function(classes) {
+					expect(classes)
+						.to.be.an('array')
+						.of.length(0);
+				});
+		});
+	});
 
 	context('setTitle', function() {
 		beforeEach(function() {
