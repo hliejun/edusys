@@ -8,14 +8,14 @@ const app = (module.exports = require('express')());
  * Route serving common students query.
  *
  * Takes an url parameter as an input:
- *    teacher: an array of valid teacher emails
+ *   teacher: an array of valid teacher emails
  *
  * Finds students who are registered to all teacher emails
  * in the array.
  *
  * Responds with HTTP 200 and a JSON body object on success:
  * {
- *    students: an array of valid student emails found in the query
+ *   students: an array of valid student emails found in the query
  * }
  *
  * @name get/api/commonstudents
@@ -44,7 +44,7 @@ app.get('/commonstudents', (req, res) => {
  *
  * Takes a JSON body object as input:
  * {
- *    student: a valid student email
+ *   student: a valid student email
  * }
  *
  * Suspends the student with the email by setting the suspension flag.

@@ -9,8 +9,8 @@ const app = (module.exports = require('express')());
  *
  * Takes a JSON body object as input:
  * {
- *    teacher: a valid teacher email
- *    students: an array of valid student emails
+ *   teacher: a valid teacher email
+ *   students: an array of valid student emails
  * }
  *
  * Registers all students to the teacher, creating

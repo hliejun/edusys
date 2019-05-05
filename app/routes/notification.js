@@ -9,16 +9,16 @@ const app = (module.exports = require('express')());
  *
  * Takes a JSON body object as input:
  * {
- *    teacher: a valid teacher email
- *    notification: a notification text containing student tag(s)
- *    that starts with '@', followed by a valid student email
+ *   teacher: a valid teacher email
+ *   notification: a notification text containing student tag(s)
+ *   that starts with '@', followed by a valid student email
  * }
  *
  * Finds students who are eligible recipients of the notification.
  *
  * Responds with HTTP 200 and a JSON body object on success:
  * {
- *    recipients: an array of valid student emails found in the query
+ *   recipients: an array of valid student emails found in the query
  * }
  *
  * @name post/api/retrievefornotifications
