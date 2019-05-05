@@ -4,7 +4,7 @@
   "description": "administrative service for educators",
   "main": "app/server.js",
   "engines": {
-    "node": ">=8.0.0"
+    "node": ">=8.10.0"
   },
   "scripts": {
     "coverage": "",

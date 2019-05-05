@@ -21,10 +21,6 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // Enable Cross-Origin Resource Sharing (CORS) for all domains
 app.use(cors());
 
-// TODO: Add logging middleware
-
-// TODO: Add error handler middleware
-
 // Mount API routes
 app.use(routes);
 
