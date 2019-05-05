@@ -14,7 +14,7 @@ const db = knex(config);
 
 const PRECISION_TIMESTAMP = 6;
 
-// FIXME: Refactor
+// TODO: Refactor
 
 /* Creators */
 

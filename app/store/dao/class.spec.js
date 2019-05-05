@@ -252,6 +252,8 @@ describe('Data Access Object: Class', function() {
 		});
 	});
 
+	// TODO: Test bulk create
+
 	context('getById', function() {
 		beforeEach(function() {
 			return classDAO.create(COMPUTING);

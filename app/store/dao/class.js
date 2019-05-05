@@ -65,6 +65,8 @@ const createIfNotExists = ({ title }, transaction) => {
 		});
 };
 
+// TODO: Add bulk create
+
 /* Readers */
 
 const getById = ({ id }) =>

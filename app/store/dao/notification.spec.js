@@ -13,7 +13,7 @@ const expect = chai.expect;
 
 const db = knex(config);
 
-// FIXME: Refactor
+// TODO: Refactor
 
 const john = {
 	name: 'John Doe',
