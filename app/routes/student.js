@@ -69,4 +69,4 @@ app.post('/suspend', (req, res) => {
 	res.status(204).send();
 });
 
-// TODO: Add other student routes
+// FIXME: Add other student routes

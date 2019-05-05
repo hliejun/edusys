@@ -15,6 +15,10 @@ const db = knex(config);
 
 // TODO: Refactor
 
+// TODO: Refactor and regroup beforeEach
+// TODO: Use bulk create of DAO if order is unimportant
+// TODO: Shorten switch-case for bulk create cases
+
 const john = {
 	name: 'John Doe',
 	email: 'john@email.com',

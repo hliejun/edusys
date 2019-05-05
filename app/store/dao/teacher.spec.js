@@ -1,13 +1,5 @@
 const bcrypt = require('bcrypt');
 const chai = require('chai');
-const knex = require('knex');
-
-const config = require('../../../knexfile');
-const teacherDAO = require('./teacher');
-
-const { TEACHERS } = require('../../constants');
-
-const { ALICE, BOB, JOHN, JANE } = TEACHERS;
 
 chai.use(require('chai-datetime'));
 chai.use(require('chai-subset'));
@@ -15,7 +7,14 @@ chai.use(require('chai-subset'));
 const assert = chai.assert;
 const expect = chai.expect;
 
-const db = knex(config);
+const { db } = require('../knex');
+const teacherDAO = require('./teacher');
+
+const { TEACHERS } = require('../../constants');
+
+const { ALICE, BOB, JOHN, JANE } = TEACHERS;
+
+// TODO: Refactor and regroup beforeEach
 
 describe('Data Access Object: Teacher', function() {
 	beforeEach(function() {

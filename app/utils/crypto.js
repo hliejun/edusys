@@ -2,11 +2,11 @@ const bcrypt = require('bcrypt');
 
 const { SALT_ROUNDS } = require('../constants');
 
-// TODO: Intercept bcrypt errors
-const encryptPassword = password => bcrypt.hash(password, SALT_ROUNDS);
+// FIXME: Intercept bcrypt errors
 const comparePassword = bcrypt.compare;
+const encryptPassword = password => bcrypt.hash(password, SALT_ROUNDS);
 
 module.exports = {
-	encryptPassword,
-	comparePassword
+	comparePassword,
+	encryptPassword
 };

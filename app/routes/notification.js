@@ -38,4 +38,4 @@ app.post('/retrievefornotifications', (req, res) => {
 	res.status(200).send();
 });
 
-// TODO: Add other notification routes
+// FIXME: Add other notification routes

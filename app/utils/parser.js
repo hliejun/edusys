@@ -1,19 +1,14 @@
-const { REGEX_EMAIL, REGEX_TAG } = require('../constants');
+const { REGEX_TAG } = require('../constants');
+const { isValidEmail } = require('./validator');
 
-const getNameFromEmail = email => {
-	const chunks = email.split('@') || [];
-	return chunks[0];
-};
+const getNameFromEmail = email => (email.split('@') || [])[0];
 
 const getTagsFromText = text => text.match(REGEX_TAG) || [];
 
-const getEmailTagsFromText = text => {
-	const tags = getTagsFromText(text);
-	return tags.filter(REGEX_EMAIL.test);
-};
+const getEmailTagsFromText = text => getTagsFromText(text).filter(isValidEmail);
 
 module.exports = {
+	getEmailTagsFromText,
 	getNameFromEmail,
-	getTagsFromText,
-	getEmailTagsFromText
+	getTagsFromText
 };

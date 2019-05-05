@@ -1,6 +1,4 @@
-const knex = require('knex');
-
-const config = require('../../../knexfile');
+const { db } = require('../knex');
 
 const {
 	MalformedResponseError,
@@ -9,23 +7,22 @@ const {
 	handle
 } = require('../../utils/errors');
 
-const teacherDAO = require('./teacher');
-const studentDAO = require('./student');
 const classDAO = require('./class');
+const studentDAO = require('./student');
+const teacherDAO = require('./teacher');
 
-const { PRECISION_TIMESTAMP } = require('../../constants');
+const {
+	ERROR_TYPES_EXT,
+	PRECISION_TIMESTAMP,
+	TABLE
+} = require('../../constants');
 
-const TABLE_TEACHER = 'teachers';
-const TABLE_STUDENT = 'students';
-const TABLE_CLASS = 'classes';
-const TABLE_REGISTER = 'registers';
-
-const db = knex(config);
+// TODO: Scope select and first
 
 /* Creators */
 
 const selectByIds = ({ teacherId, studentId, classId }) =>
-	db(TABLE_REGISTER)
+	db(TABLE.REGISTER)
 		.where({
 			teacher_id: teacherId,
 			student_id: studentId,
@@ -51,7 +48,7 @@ const create = ({ teacherId, studentId, classId }) =>
 	checkIfExist({ teacherId, studentId, classId })
 		.then(entryExists => {
 			if (!entryExists) {
-				return db(TABLE_REGISTER).insert({
+				return db(TABLE.REGISTER).insert({
 					teacher_id: teacherId,
 					student_id: studentId,
 					class_id: classId || null
@@ -142,7 +139,7 @@ const createByEmail = ({ teacherEmail, studentEmail, classId }) =>
 const createIfNotExists = ({ teacherId, studentId, classId }, transaction) => {
 	const table = transaction || db;
 	return table
-		.from(TABLE_TEACHER)
+		.from(TABLE.TEACHER)
 		.where({ id: teacherId })
 		.first('id')
 		.then(teacher => {
@@ -150,7 +147,7 @@ const createIfNotExists = ({ teacherId, studentId, classId }, transaction) => {
 				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
 			return table
-				.from(TABLE_STUDENT)
+				.from(TABLE.STUDENT)
 				.where({ id: studentId })
 				.first('id');
 		})
@@ -161,7 +158,7 @@ const createIfNotExists = ({ teacherId, studentId, classId }, transaction) => {
 			return classId == null
 				? Promise.resolve()
 				: table
-					.from(TABLE_CLASS)
+					.from(TABLE.CLASS)
 					.where({ id: classId })
 					.first('id');
 		})
@@ -170,7 +167,7 @@ const createIfNotExists = ({ teacherId, studentId, classId }, transaction) => {
 				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
 			return table
-				.from(TABLE_REGISTER)
+				.from(TABLE.REGISTER)
 				.where({
 					teacher_id: teacherId,
 					student_id: studentId,
@@ -188,7 +185,7 @@ const createIfNotExists = ({ teacherId, studentId, classId }, transaction) => {
 					student_id: studentId,
 					class_id: classId || null
 				})
-				.into(TABLE_REGISTER);
+				.into(TABLE.REGISTER);
 		})
 		.then(ids => {
 			if (ids == null || ids.length === 0 || ids[0] == null) {
@@ -199,9 +196,9 @@ const createIfNotExists = ({ teacherId, studentId, classId }, transaction) => {
 			return Promise.resolve(ids[0]);
 		})
 		.catch(error => {
-			if (error.code === 'ER_DUP_ENTRY') {
+			if (error.code === ERROR_TYPES_EXT.ER_DUP_ENTRY) {
 				return table
-					.from(TABLE_REGISTER)
+					.from(TABLE.REGISTER)
 					.where({
 						teacher_id: teacherId,
 						student_id: studentId,
@@ -220,19 +217,19 @@ const createIfNotExists = ({ teacherId, studentId, classId }, transaction) => {
 /* Readers */
 
 const getById = ({ id }) =>
-	db(TABLE_REGISTER)
+	db(TABLE.REGISTER)
 		.where({ id })
 		.first()
 		.catch(error => handle(error, `finding register (id: ${id})`));
 
 const getByIds = ids =>
-	db(TABLE_REGISTER)
+	db(TABLE.REGISTER)
 		.whereIn('id', ids)
 		.select()
 		.catch(error => handle(error, `finding registers (ids: ${ids})`));
 
 const selectByTeacherId = ({ teacherId }) =>
-	db(TABLE_REGISTER)
+	db(TABLE.REGISTER)
 		.where({ teacher_id: teacherId })
 		.select();
 
@@ -265,7 +262,7 @@ const getByTeacherEmail = ({ teacherEmail }) =>
 		);
 
 const selectByStudentId = ({ studentId }) =>
-	db(TABLE_REGISTER)
+	db(TABLE.REGISTER)
 		.where({ student_id: studentId })
 		.select();
 
@@ -304,7 +301,7 @@ const getByClass = ({ classId }) =>
 			if (classroom == null) {
 				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
-			return db(TABLE_REGISTER)
+			return db(TABLE.REGISTER)
 				.where({ class_id: classId })
 				.select();
 		})
@@ -313,7 +310,7 @@ const getByClass = ({ classId }) =>
 /* Updaters */
 
 const setTeacherId = ({ id, teacherId }) =>
-	db(TABLE_REGISTER)
+	db(TABLE.REGISTER)
 		.where({ id })
 		.update({
 			teacher_id: teacherId,
@@ -381,7 +378,7 @@ const setTeacherByEmail = ({ id, teacherEmail }) =>
 		);
 
 const setStudentId = ({ id, studentId }) =>
-	db(TABLE_REGISTER)
+	db(TABLE.REGISTER)
 		.where({ id })
 		.update({
 			student_id: studentId,
@@ -465,7 +462,7 @@ const setClass = ({ id, classId }) =>
 			if (classroom == null) {
 				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
-			return db(TABLE_REGISTER)
+			return db(TABLE.REGISTER)
 				.where({ id })
 				.update({
 					class_id: classroom.id,
@@ -489,7 +486,7 @@ const deleteById = ({ id }) =>
 			}
 			return Promise.all([
 				Promise.resolve(register),
-				db(TABLE_REGISTER)
+				db(TABLE.REGISTER)
 					.where({ id })
 					.del()
 			]);
@@ -500,7 +497,7 @@ const deleteById = ({ id }) =>
 		.catch(error => handle(error, `deleting register (id: ${id})`));
 
 const deleteByTeacher = ({ teacherId }) =>
-	db(TABLE_REGISTER)
+	db(TABLE.REGISTER)
 		.where({ teacher_id: teacherId })
 		.del();
 
@@ -558,7 +555,7 @@ const deleteByTeacherEmail = ({ teacherEmail }) =>
 		);
 
 const deleteByStudent = ({ studentId }) =>
-	db(TABLE_REGISTER)
+	db(TABLE.REGISTER)
 		.where({ student_id: studentId })
 		.del();
 
@@ -622,7 +619,7 @@ const deleteByClass = ({ classId }) =>
 			if (classroom == null) {
 				return Promise.reject(new NotFoundError(`class (id: ${classId})`));
 			}
-			return db(TABLE_REGISTER)
+			return db(TABLE.REGISTER)
 				.where({ class_id: classId })
 				.select();
 		})
@@ -631,7 +628,7 @@ const deleteByClass = ({ classId }) =>
 				Promise.resolve(registers || []),
 				registers == null || registers.length === 0
 					? Promise.resolve(false)
-					: db(TABLE_REGISTER)
+					: db(TABLE.REGISTER)
 						.where({ class_id: classId })
 						.del()
 			])
@@ -650,7 +647,7 @@ const getStudentsOfTeacher = ({ teacherId }) =>
 			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
-			return db(TABLE_REGISTER)
+			return db(TABLE.REGISTER)
 				.distinct('student_id')
 				.where('teacher_id', teacherId);
 		})

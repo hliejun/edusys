@@ -1,32 +1,32 @@
-const knex = require('knex');
-
-const config = require('../../../knexfile');
+const { db } = require('../knex');
 
 const {
-	MalformedResponseError,
-	UniqueConstraintError,
-	NotFoundError,
 	IdenticalObjectError,
+	MalformedResponseError,
+	NotFoundError,
+	UniqueConstraintError,
 	handle
 } = require('../../utils/errors');
 
-const { encryptPassword, comparePassword } = require('../../utils/crypto');
+const { comparePassword, encryptPassword } = require('../../utils/crypto');
 const { getNameFromEmail } = require('../../utils/parser');
 
-const { PRECISION_TIMESTAMP } = require('../../constants');
+const {
+	DEFAULT_TEACHER_NAME,
+	DEFAULT_TEACHER_PASSWORD,
+	ERROR_TYPES_EXT,
+	PRECISION_TIMESTAMP,
+	TABLE
+} = require('../../constants');
 
-const TABLE_TEACHER = 'teachers';
-const DEFAULT_PASSWORD = 'password';
-const DEFAULT_NAME_TEACHER = 'teacher';
-
-const db = knex(config);
+// TODO: Scope select and first
 
 /* Creators */
 
 const create = ({ name, email, password }) =>
 	encryptPassword(password)
 		.then(hash =>
-			db(TABLE_TEACHER).insert({
+			db(TABLE.TEACHER).insert({
 				name,
 				email,
 				password: hash
@@ -41,7 +41,7 @@ const create = ({ name, email, password }) =>
 			);
 		})
 		.catch(error => {
-			if (error.code === 'ER_DUP_ENTRY') {
+			if (error.code === ERROR_TYPES_EXT.ER_DUP_ENTRY) {
 				return Promise.reject(new UniqueConstraintError('email', email));
 			}
 			return handle(error, `creating teacher (name: ${name}, email: ${email})`);
@@ -50,13 +50,13 @@ const create = ({ name, email, password }) =>
 const createIfNotExists = ({ email, name, password }, transaction) => {
 	const table = transaction || db;
 	return table
-		.from(TABLE_TEACHER)
+		.from(TABLE.TEACHER)
 		.where({ email })
 		.first('id')
 		.then(teacher =>
 			Promise.all([
 				Promise.resolve(teacher),
-				encryptPassword(password || DEFAULT_PASSWORD)
+				encryptPassword(password || DEFAULT_TEACHER_PASSWORD)
 			])
 		)
 		.then(([teacher, hash]) => {
@@ -66,10 +66,10 @@ const createIfNotExists = ({ email, name, password }, transaction) => {
 			return table
 				.insert({
 					email,
-					name: name || getNameFromEmail(email) || DEFAULT_NAME_TEACHER,
+					name: name || getNameFromEmail(email) || DEFAULT_TEACHER_NAME,
 					password: hash
 				})
-				.into(TABLE_TEACHER);
+				.into(TABLE.TEACHER);
 		})
 		.then(ids => {
 			if (ids == null || ids.length === 0 || ids[0] == null) {
@@ -78,9 +78,9 @@ const createIfNotExists = ({ email, name, password }, transaction) => {
 			return Promise.resolve(ids[0]);
 		})
 		.catch(error => {
-			if (error.code === 'ER_DUP_ENTRY') {
+			if (error.code === ERROR_TYPES_EXT.ER_DUP_ENTRY) {
 				return table
-					.from(TABLE_TEACHER)
+					.from(TABLE.TEACHER)
 					.where({ email })
 					.first('id')
 					.then(teacher => Promise.resolve(teacher.id));
@@ -100,7 +100,7 @@ const bulkCreate = teachers =>
 							email: teacher.email,
 							password: hash
 						})
-						.into(TABLE_TEACHER)
+						.into(TABLE.TEACHER)
 				)
 				.then(ids => {
 					if (ids && ids.length === 1) {
@@ -111,7 +111,7 @@ const bulkCreate = teachers =>
 					);
 				})
 				.catch(error => {
-					if (error.code === 'ER_DUP_ENTRY') {
+					if (error.code === ERROR_TYPES_EXT.ER_DUP_ENTRY) {
 						return Promise.reject(
 							new UniqueConstraintError('email', teacher.email)
 						);
@@ -128,25 +128,25 @@ const bulkCreate = teachers =>
 /* Readers */
 
 const getById = ({ id }) =>
-	db(TABLE_TEACHER)
+	db(TABLE.TEACHER)
 		.where({ id })
 		.first()
 		.catch(error => handle(error, `finding teacher (id: ${id})`));
 
 const getByIds = ids =>
-	db(TABLE_TEACHER)
+	db(TABLE.TEACHER)
 		.whereIn('id', ids)
 		.select()
 		.catch(error => handle(error, `finding teachers (ids: ${ids})`));
 
 const getByEmail = ({ email }) =>
-	db(TABLE_TEACHER)
+	db(TABLE.TEACHER)
 		.where({ email })
 		.first()
 		.catch(error => handle(error, `finding teacher (email: ${email})`));
 
 const getByEmails = emails =>
-	db(TABLE_TEACHER)
+	db(TABLE.TEACHER)
 		.whereIn('email', emails)
 		.select()
 		.catch(error => handle(error, `finding teachers (emails: ${emails})`));
@@ -159,7 +159,7 @@ const setName = ({ id, name }) =>
 			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${id})`));
 			}
-			return db(TABLE_TEACHER)
+			return db(TABLE.TEACHER)
 				.where({ id })
 				.update({ name, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
@@ -173,12 +173,12 @@ const setEmail = ({ id, email }) =>
 			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${id})`));
 			}
-			return db(TABLE_TEACHER)
+			return db(TABLE.TEACHER)
 				.where({ id })
 				.update({ email, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
 		.catch(error => {
-			if (error.code === 'ER_DUP_ENTRY') {
+			if (error.code === ERROR_TYPES_EXT.ER_DUP_ENTRY) {
 				return Promise.reject(new UniqueConstraintError('email', email));
 			}
 			return handle(error, `updating email of teacher (id: ${id}) to ${email}`);
@@ -202,7 +202,7 @@ const setPassword = ({ id, password }) =>
 			return encryptPassword(password, teacher.password);
 		})
 		.then(hash =>
-			db(TABLE_TEACHER)
+			db(TABLE.TEACHER)
 				.where({ id })
 				.update({ password: hash, updated_at: db.fn.now(PRECISION_TIMESTAMP) })
 		)
@@ -211,7 +211,7 @@ const setPassword = ({ id, password }) =>
 /* Deletors */
 
 const remove = ({ id }) =>
-	db(TABLE_TEACHER)
+	db(TABLE.TEACHER)
 		.where({ id })
 		.del();
 

@@ -1,25 +1,25 @@
 const chai = require('chai');
-const knex = require('knex');
-
-const config = require('../../../knexfile');
-
-const registerDAO = require('./register');
-const teacherDAO = require('./teacher');
-const studentDAO = require('./student');
-const classDAO = require('./class');
 
 chai.use(require('chai-datetime'));
 chai.use(require('chai-subset'));
 
 const expect = chai.expect;
 
-const db = knex(config);
+const { db } = require('../knex');
+const registerDAO = require('./register');
+const teacherDAO = require('./teacher');
+const studentDAO = require('./student');
+const classDAO = require('./class');
 
 const { TEACHERS, STUDENTS, CLASSES } = require('../../constants');
 
 const { JOHN, JANE, BOB } = TEACHERS;
 const { MAX, MAY, MATT } = STUDENTS;
 const { COMPUTING, MATH, PHYSICS } = CLASSES;
+
+// TODO: Refactor and regroup beforeEach
+// TODO: Use bulk create of DAO if order is unimportant
+// TODO: Shorten switch-case for bulk create cases
 
 describe('Data Access Object: Register', function() {
 	beforeEach(function() {

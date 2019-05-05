@@ -1,27 +1,27 @@
-const knex = require('knex');
-
-const config = require('../../../knexfile');
+const { db } = require('../knex');
 
 const {
 	MalformedResponseError,
-	UniqueConstraintError,
 	NotFoundError,
+	UniqueConstraintError,
 	handle
 } = require('../../utils/errors');
 
 const { getNameFromEmail } = require('../../utils/parser');
 
-const { PRECISION_TIMESTAMP } = require('../../constants');
+const {
+	DEFAULT_STUDENT_NAME,
+	ERROR_TYPES_EXT,
+	PRECISION_TIMESTAMP,
+	TABLE
+} = require('../../constants');
 
-const TABLE_STUDENT = 'students';
-const DEFAULT_NAME_STUDENT = 'student';
-
-const db = knex(config);
+// TODO: Scope select and first
 
 /* Creators */
 
 const create = ({ name, email }) =>
-	db(TABLE_STUDENT)
+	db(TABLE.STUDENT)
 		.insert({ name, email })
 		.then(ids => {
 			if (ids && ids.length === 1) {
@@ -32,7 +32,7 @@ const create = ({ name, email }) =>
 			);
 		})
 		.catch(error => {
-			if (error.code === 'ER_DUP_ENTRY') {
+			if (error.code === ERROR_TYPES_EXT.ER_DUP_ENTRY) {
 				return Promise.reject(new UniqueConstraintError('email', email));
 			}
 			return handle(error, `creating student (name: ${name}, email: ${email})`);
@@ -41,7 +41,7 @@ const create = ({ name, email }) =>
 const createIfNotExists = ({ email, name }, transaction) => {
 	const table = transaction || db;
 	return table
-		.from(TABLE_STUDENT)
+		.from(TABLE.STUDENT)
 		.where({ email })
 		.first('id')
 		.then(student => {
@@ -51,9 +51,9 @@ const createIfNotExists = ({ email, name }, transaction) => {
 			return table
 				.insert({
 					email,
-					name: name || getNameFromEmail(email) || DEFAULT_NAME_STUDENT
+					name: name || getNameFromEmail(email) || DEFAULT_STUDENT_NAME
 				})
-				.into(TABLE_STUDENT);
+				.into(TABLE.STUDENT);
 		})
 		.then(ids => {
 			if (ids == null || ids.length === 0 || ids[0] == null) {
@@ -62,9 +62,9 @@ const createIfNotExists = ({ email, name }, transaction) => {
 			return Promise.resolve(ids[0]);
 		})
 		.catch(error => {
-			if (error.code === 'ER_DUP_ENTRY') {
+			if (error.code === ERROR_TYPES_EXT.ER_DUP_ENTRY) {
 				return table
-					.from(TABLE_STUDENT)
+					.from(TABLE.STUDENT)
 					.where({ email })
 					.first('id')
 					.then(student => Promise.resolve(student.id));
@@ -81,7 +81,7 @@ const bulkCreate = students =>
 					name: student.name,
 					email: student.email
 				})
-				.into(TABLE_STUDENT)
+				.into(TABLE.STUDENT)
 				.then(ids => {
 					if (ids && ids.length === 1) {
 						return Promise.resolve(ids[0]);
@@ -91,7 +91,7 @@ const bulkCreate = students =>
 					);
 				})
 				.catch(error => {
-					if (error.code === 'ER_DUP_ENTRY') {
+					if (error.code === ERROR_TYPES_EXT.ER_DUP_ENTRY) {
 						return Promise.reject(
 							new UniqueConstraintError('email', student.email)
 						);
@@ -108,25 +108,25 @@ const bulkCreate = students =>
 /* Readers */
 
 const getById = ({ id }) =>
-	db(TABLE_STUDENT)
+	db(TABLE.STUDENT)
 		.where({ id })
 		.first()
 		.catch(error => handle(error, `finding student (id: ${id})`));
 
 const getByIds = ids =>
-	db(TABLE_STUDENT)
+	db(TABLE.STUDENT)
 		.whereIn('id', ids)
 		.select()
 		.catch(error => handle(error, `finding students (ids: ${ids})`));
 
 const getByEmail = ({ email }) =>
-	db(TABLE_STUDENT)
+	db(TABLE.STUDENT)
 		.where({ email })
 		.first()
 		.catch(error => handle(error, `finding student (email: ${email})`));
 
 const getByEmails = emails =>
-	db(TABLE_STUDENT)
+	db(TABLE.STUDENT)
 		.whereIn('email', emails)
 		.select()
 		.catch(error => handle(error, `finding students (emails: ${emails})`));
@@ -139,7 +139,7 @@ const setName = ({ id, name }) =>
 			if (student == null) {
 				return Promise.reject(new NotFoundError(`student (id: ${id})`));
 			}
-			return db(TABLE_STUDENT)
+			return db(TABLE.STUDENT)
 				.where({ id })
 				.update({ name, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
@@ -153,12 +153,12 @@ const setEmail = ({ id, email }) =>
 			if (student == null) {
 				return Promise.reject(new NotFoundError(`student (id: ${id})`));
 			}
-			return db(TABLE_STUDENT)
+			return db(TABLE.STUDENT)
 				.where({ id })
 				.update({ email, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
 		.catch(error => {
-			if (error.code === 'ER_DUP_ENTRY') {
+			if (error.code === ERROR_TYPES_EXT.ER_DUP_ENTRY) {
 				return Promise.reject(new UniqueConstraintError('email', email));
 			}
 			return handle(error, `updating email of student (id: ${id}) to ${email}`);
@@ -170,7 +170,7 @@ const setSuspension = ({ id, isSuspended }) =>
 			if (student == null) {
 				return Promise.reject(new NotFoundError(`student (id: ${id})`));
 			}
-			return db(TABLE_STUDENT)
+			return db(TABLE.STUDENT)
 				.where({ id })
 				.update({
 					is_suspended: isSuspended,
@@ -187,7 +187,7 @@ const setSuspension = ({ id, isSuspended }) =>
 /* Deletors */
 
 const remove = ({ id }) =>
-	db(TABLE_STUDENT)
+	db(TABLE.STUDENT)
 		.where({ id })
 		.del();
 

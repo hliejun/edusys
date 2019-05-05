@@ -1,27 +1,27 @@
-const { REGEX_EMAIL } = require('../constants');
+const {
+	MIN_LENGTH_NAME,
+	MIN_LENGTH_PASSWORD,
+	MIN_LENGTH_TITLE,
+	REGEX_EMAIL
+} = require('../constants');
 
-const MIN_LENGTH_NAME = 3;
-const MIN_LENGTH_PASSWORD = 7;
-const MIN_LENGTH_TITLE = 5;
-
-const isValidEmail = REGEX_EMAIL.test;
-
-// FIXME: Add regex for name validation
-const isValidName = name =>
-	name != null && name.length && name.length >= MIN_LENGTH_NAME;
-
-// FIXME: Add regex for password validation
-const isValidPassword = password =>
-	password != null && password.length && password.length >= MIN_LENGTH_PASSWORD;
+// FIXME: Add regex for validations
+// FIXME: Add validations for notification fields
 
 const isValidClassTitle = title =>
 	title != null && title.length && title.length >= MIN_LENGTH_TITLE;
 
-// FIXME: Add validations for notification fields
+const isValidEmail = REGEX_EMAIL.test;
+
+const isValidName = name =>
+	name != null && name.length && name.length >= MIN_LENGTH_NAME;
+
+const isValidPassword = password =>
+	password != null && password.length && password.length >= MIN_LENGTH_PASSWORD;
 
 module.exports = {
+	isValidClassTitle,
 	isValidEmail,
 	isValidName,
-	isValidPassword,
-	isValidClassTitle
+	isValidPassword
 };

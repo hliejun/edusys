@@ -16,6 +16,8 @@ const PRECISION_TIMESTAMP = 6;
 
 // TODO: Refactor
 
+// TODO: Scope select and first
+
 /* Creators */
 
 const create = ({ teacherId, title, content }) =>

@@ -1,24 +1,24 @@
-const knex = require('knex');
-
-const config = require('../../../knexfile');
+const { db } = require('../knex');
 
 const {
 	MalformedResponseError,
-	UniqueConstraintError,
 	NotFoundError,
+	UniqueConstraintError,
 	handle
 } = require('../../utils/errors');
 
-const { PRECISION_TIMESTAMP } = require('../../constants');
+const {
+	ERROR_TYPES_EXT,
+	PRECISION_TIMESTAMP,
+	TABLE
+} = require('../../constants');
 
-const TABLE_CLASS = 'classes';
-
-const db = knex(config);
+// TODO: Scope select and first
 
 /* Creators */
 
 const create = ({ title }) =>
-	db(TABLE_CLASS)
+	db(TABLE.CLASS)
 		.insert({ title })
 		.then(ids => {
 			if (ids && ids.length === 1) {
@@ -29,7 +29,7 @@ const create = ({ title }) =>
 			);
 		})
 		.catch(error => {
-			if (error.code === 'ER_DUP_ENTRY') {
+			if (error.code === ERROR_TYPES_EXT.ER_DUP_ENTRY) {
 				return Promise.reject(new UniqueConstraintError('class title', title));
 			}
 			return handle(error, `creating class (title: ${title})`);
@@ -38,14 +38,14 @@ const create = ({ title }) =>
 const createIfNotExists = ({ title }, transaction) => {
 	const table = transaction || db;
 	return table
-		.from(TABLE_CLASS)
+		.from(TABLE.CLASS)
 		.where({ title })
 		.first('id')
 		.then(classroom => {
 			if (classroom && classroom.id != null) {
 				return Promise.resolve([classroom.id]);
 			}
-			return table.insert({ title }).into(TABLE_CLASS);
+			return table.insert({ title }).into(TABLE.CLASS);
 		})
 		.then(ids => {
 			if (ids == null || ids.length === 0 || ids[0] == null) {
@@ -54,9 +54,9 @@ const createIfNotExists = ({ title }, transaction) => {
 			return Promise.resolve(ids[0]);
 		})
 		.catch(error => {
-			if (error.code === 'ER_DUP_ENTRY') {
+			if (error.code === ERROR_TYPES_EXT.ER_DUP_ENTRY) {
 				return table
-					.from(TABLE_CLASS)
+					.from(TABLE.CLASS)
 					.where({ title })
 					.first('id')
 					.then(classroom => Promise.resolve(classroom.id));
@@ -70,25 +70,25 @@ const createIfNotExists = ({ title }, transaction) => {
 /* Readers */
 
 const getById = ({ id }) =>
-	db(TABLE_CLASS)
+	db(TABLE.CLASS)
 		.where({ id })
 		.first()
 		.catch(error => handle(error, `finding class (id: ${id})`));
 
 const getByIds = ids =>
-	db(TABLE_CLASS)
+	db(TABLE.CLASS)
 		.whereIn('id', ids)
 		.select()
 		.catch(error => handle(error, `finding classes (ids: ${ids})`));
 
 const getByTitle = ({ title }) =>
-	db(TABLE_CLASS)
+	db(TABLE.CLASS)
 		.where({ title })
 		.first()
 		.catch(error => handle(error, `finding class (title: ${title})`));
 
 const getByTitles = titles =>
-	db(TABLE_CLASS)
+	db(TABLE.CLASS)
 		.whereIn('title', titles)
 		.select()
 		.catch(error => handle(error, `finding classes (titles: ${titles})`));
@@ -101,12 +101,12 @@ const setTitle = ({ id, title }) =>
 			if (classroom == null) {
 				return Promise.reject(new NotFoundError(`class (id: ${id})`));
 			}
-			return db(TABLE_CLASS)
+			return db(TABLE.CLASS)
 				.where({ id })
 				.update({ title, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
 		.catch(error => {
-			if (error.code === 'ER_DUP_ENTRY') {
+			if (error.code === ERROR_TYPES_EXT.ER_DUP_ENTRY) {
 				return Promise.reject(new UniqueConstraintError('class title', title));
 			}
 			return handle(error, `updating title of class (id: ${id}) to ${title}`);
@@ -115,7 +115,7 @@ const setTitle = ({ id, title }) =>
 /* Deletors */
 
 const remove = ({ id }) =>
-	db(TABLE_CLASS)
+	db(TABLE.CLASS)
 		.where({ id })
 		.del();
 
