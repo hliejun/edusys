@@ -10,7 +10,18 @@ const CLASSES = {
 	}
 };
 
-const NOTIFICATIONS = {};
+const NOTIFICATIONS = {
+	RECITATION: {
+		content:
+			'Please be reminded that recitation is on Monday. Please be punctual. @exchangestudent@gmail.com',
+		title: 'Recitation on Monday'
+	},
+	QUIZ: {
+		content:
+			'I hate to break it to you class but there is a quiz this coming Saturday. Sorry to eat into your weekend. @exchangestudent@gmail.com',
+		title: 'Quiz this Saturday'
+	}
+};
 
 const STUDENTS = {
 	MALICE: {

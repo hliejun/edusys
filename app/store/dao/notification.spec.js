@@ -1,54 +1,33 @@
 const chai = require('chai');
-const knex = require('knex');
-
-const config = require('../../../knexfile');
-
-const notificationDAO = require('./notification');
-
-const teacherDAO = require('./teacher');
 
 chai.use(require('chai-datetime'));
+chai.use(require('chai-subset'));
 
 const expect = chai.expect;
 
-const db = knex(config);
+const { db } = require('../knex');
+const notificationDAO = require('./notification');
+const teacherDAO = require('./teacher');
 
-// TODO: Refactor
+const { NOTIFICATIONS, TEACHERS } = require('../../constants');
+
+const { BOB, JANE, JOHN } = TEACHERS;
+const { QUIZ, RECITATION } = NOTIFICATIONS;
 
 // TODO: Refactor and regroup beforeEach
 // TODO: Use bulk create of DAO if order is unimportant
 // TODO: Shorten switch-case for bulk create cases
 
-const john = {
-	name: 'John Doe',
-	email: 'john@email.com',
-	password: 'P455w0rd'
-};
-
-const jane = {
-	name: 'Jane Doe',
-	email: 'jane@email.com',
-	password: 'P455w0rd'
-};
-
-const recitation = {
-	title: 'Recitation on Monday',
-	content:
-		'Please be reminded that recitation is on Monday. Please be punctual. @exchangestudent@gmail.com'
-};
-
-const quiz = {
-	title: 'Quiz this Saturday',
-	content:
-		'I hate to break it to you class but there is a quiz this coming Saturday. Sorry to eat into your weekend. @exchangestudent@gmail.com'
-};
-
 describe('Data Access Object: Notification', function() {
 	beforeEach(function() {
 		return db.migrate
 			.rollback()
-			.then(() => db.migrate.latest())
-			.then(() => db.seed.run());
+			.then(function() {
+				return db.migrate.latest();
+			})
+			.then(function() {
+				return db.seed.run();
+			});
 	});
 
 	afterEach(function() {
@@ -56,99 +35,79 @@ describe('Data Access Object: Notification', function() {
 	});
 
 	context('createBySenderId', function() {
-		it('should create a notification, returning values', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should create notification, returning values', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
 						.that.equals(1);
-					return db('notifications')
-						.where({ id })
-						.first();
+					return notificationDAO.getById({ id });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notification) {
+					expect(notification)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
 							teacher_id: 1,
-							title: recitation.title,
-							content: recitation.content
+							title: RECITATION.title,
+							content: RECITATION.content
 						});
-					expect(result['created_at'])
+					expect(notification['created_at'])
 						.to.be.a('date')
-						.that.equalDate(result['updated_at'])
-						.and.equalTime(result['updated_at']);
+						.that.equalDate(notification['updated_at'])
+						.and.equalTime(notification['updated_at']);
 				});
 		});
 
-		it('should create another row even if parameters are repeated', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		it('should create another notification regardless of unicity of attributes', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
 						.that.equals(1);
-					return db('notifications')
-						.where({ id })
-						.first();
+					return notificationDAO.getById({ id });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notification) {
+					expect(notification)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
 							teacher_id: 1,
-							title: recitation.title,
-							content: recitation.content
+							title: RECITATION.title,
+							content: RECITATION.content
 						});
 					return notificationDAO.createBySenderId({
 						teacherId: 1,
-						...recitation
+						...RECITATION
 					});
 				})
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
 						.that.equals(2);
-					return db('notifications')
-						.where({ id })
-						.first();
+					return notificationDAO.getById({ id });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notification) {
+					expect(notification)
 						.to.be.an('object')
 						.that.includes({
 							id: 2,
 							teacher_id: 1,
-							title: recitation.title,
-							content: recitation.content
+							title: RECITATION.title,
+							content: RECITATION.content
 						});
 				});
 		});
 
-		it('should NOT create a row if teacher of corresponding teacher_id does not exist', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 2,
-						...recitation
-					});
-				})
+		it('should NOT create notification if teacher with matching id does not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 2, ...RECITATION })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
@@ -158,166 +117,137 @@ describe('Data Access Object: Notification', function() {
 	});
 
 	context('createBySenderEmail', function() {
-		it('should create a row with returning values', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderEmail({
-						email: john.email,
-						...recitation
-					});
-				})
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should create notification, returning attributes', function() {
+			return notificationDAO
+				.createBySenderEmail({ email: JOHN.email, ...RECITATION })
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
 						.that.equals(1);
-					return db('notifications')
-						.where({ id })
-						.first();
+					return notificationDAO.getById({ id });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notification) {
+					expect(notification)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
 							teacher_id: 1,
-							title: recitation.title,
-							content: recitation.content
+							title: RECITATION.title,
+							content: RECITATION.content
 						});
-					expect(result['created_at'])
+					expect(notification['created_at'])
 						.to.be.a('date')
-						.that.equalDate(result['updated_at'])
-						.and.equalTime(result['updated_at']);
+						.that.equalDate(notification['updated_at'])
+						.and.equalTime(notification['updated_at']);
 				});
 		});
 
-		it('should create another row even if parameters are repeated', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderEmail({
-						email: john.email,
-						...recitation
-					});
-				})
+		it('should create another notification regardless of unicity of attributes', function() {
+			return notificationDAO
+				.createBySenderEmail({ email: JOHN.email, ...RECITATION })
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
 						.that.equals(1);
-					return db('notifications')
-						.where({ id })
-						.first();
+					return notificationDAO.getById({ id });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notification) {
+					expect(notification)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
 							teacher_id: 1,
-							title: recitation.title,
-							content: recitation.content
+							title: RECITATION.title,
+							content: RECITATION.content
 						});
 					return notificationDAO.createBySenderEmail({
-						email: john.email,
-						...recitation
+						email: JOHN.email,
+						...RECITATION
 					});
 				})
 				.then(function(id) {
 					expect(id)
 						.to.be.a('number')
 						.that.equals(2);
-					return db('notifications')
-						.where({ id })
-						.first();
+					return notificationDAO.getById({ id });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notification) {
+					expect(notification)
 						.to.be.an('object')
 						.that.includes({
 							id: 2,
 							teacher_id: 1,
-							title: recitation.title,
-							content: recitation.content
+							title: RECITATION.title,
+							content: RECITATION.content
 						});
 				});
 		});
 
-		it('should NOT create a row if teacher of corresponding email does not exist', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderEmail({
-						email: jane.email,
-						...recitation
-					});
-				})
+		it('should NOT create notification if teacher with matching email does not exist', function() {
+			return notificationDAO
+				.createBySenderEmail({ email: JANE.email, ...RECITATION })
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher (email: ${jane.email}) does not exist.`
+						`The teacher (email: ${JANE.email}) does not exist.`
 					);
 				});
 		});
 	});
 
 	context('getById', function() {
-		it('should read and return the row corresponding to given id', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should read notification with matching id, returning attributes', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
 					return notificationDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notification) {
+					expect(notification)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
 							teacher_id: 1,
-							title: recitation.title,
-							content: recitation.content
+							title: RECITATION.title,
+							content: RECITATION.content
 						});
 				});
 		});
 
-		it('should read and return "undefined" if given a row id that does not exist', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		it('should return "undefined" if notification with matching id does not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
 					return notificationDAO.getById({ id: 2 });
 				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
+				.then(function(notification) {
+					expect(notification).to.be.an('undefined');
 				});
 		});
 	});
 
+	// FIXME: Test get by ids
+
 	context('setSenderById', function() {
-		it('should update teacher_id field with provided value and return id', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.create(jane);
-				})
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		beforeEach(function() {
+			return teacherDAO.create(JOHN).then(function() {
+				return teacherDAO.create(JANE);
+			});
+		});
+
+		it('should update teacher id of notification, returning id', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function(id) {
 					return notificationDAO.setSenderById({ id, teacherId: 2 });
 				})
@@ -325,33 +255,24 @@ describe('Data Access Object: Notification', function() {
 					expect(id).to.equal(1);
 					return notificationDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notification) {
+					expect(notification)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
 							teacher_id: 2,
-							title: recitation.title,
-							content: recitation.content
+							title: RECITATION.title,
+							content: RECITATION.content
 						});
-					expect(result['updated_at'])
+					expect(notification['updated_at'])
 						.to.be.a('date')
-						.that.afterTime(result['created_at']);
+						.that.afterTime(notification['created_at']);
 				});
 		});
 
-		it('should NOT update teacher_id field if provided notification id does not exist', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.create(jane);
-				})
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		it('should NOT update if notification with matching id does not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
 					return notificationDAO.setSenderById({ id: 2, teacherId: 2 });
 				})
@@ -362,75 +283,57 @@ describe('Data Access Object: Notification', function() {
 				});
 		});
 
-		it('should NOT update teacher_id field if provided teacher id does not exist', function() {
-			return teacherDAO
-				.create(john)
+		it('should NOT update if teacher with matching id does not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
-				.then(function() {
-					return notificationDAO.setSenderById({ id: 1, teacherId: 2 });
+					return notificationDAO.setSenderById({ id: 1, teacherId: 3 });
 				})
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(Error, 'The teacher (id: 2) does not exist.');
+					}).to.throw(Error, 'The teacher (id: 3) does not exist.');
 				});
 		});
 	});
 
 	context('setSenderByEmail', function() {
-		it('should update teacher_id field with referenced value by email and return id', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.create(jane);
-				})
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		beforeEach(function() {
+			return teacherDAO.create(JOHN).then(function() {
+				return teacherDAO.create(JANE);
+			});
+		});
+
+		it('should update teacher id of notification with matching email, returning id', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function(id) {
-					return notificationDAO.setSenderByEmail({ id, email: jane.email });
+					return notificationDAO.setSenderByEmail({ id, email: JANE.email });
 				})
 				.then(function(id) {
 					expect(id).to.equal(1);
 					return notificationDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notification) {
+					expect(notification)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
 							teacher_id: 2,
-							title: recitation.title,
-							content: recitation.content
+							title: RECITATION.title,
+							content: RECITATION.content
 						});
-					expect(result['updated_at'])
+					expect(notification['updated_at'])
 						.to.be.a('date')
-						.that.afterTime(result['created_at']);
+						.that.afterTime(notification['created_at']);
 				});
 		});
 
-		it('should NOT update teacher_id field if provided notification id does not exist', function() {
-			return teacherDAO
-				.create(john)
+		it('should NOT update if notification with matching id does not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
-					return teacherDAO.create(jane);
-				})
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
-				.then(function() {
-					return notificationDAO.setSenderByEmail({ id: 2, email: jane.email });
+					return notificationDAO.setSenderByEmail({ id: 2, email: JANE.email });
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -439,77 +342,60 @@ describe('Data Access Object: Notification', function() {
 				});
 		});
 
-		it('should NOT update teacher_id field if provided teacher email does not exist', function() {
-			return teacherDAO
-				.create(john)
+		it('should NOT update if teacher with matching email does not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
-				.then(function() {
-					return notificationDAO.setSenderByEmail({ id: 1, email: jane.email });
+					return notificationDAO.setSenderByEmail({ id: 1, email: BOB.email });
 				})
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher (email: ${jane.email}) does not exist.`
+						`The teacher (email: ${BOB.email}) does not exist.`
 					);
 				});
 		});
 	});
 
 	context('setTitle', function() {
-		it('should update title field with value and return id', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should update title of notification, returning id', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function(id) {
-					return notificationDAO.setTitle({
-						id,
-						title: quiz.title
-					});
+					return notificationDAO.setTitle({ id, title: QUIZ.title });
 				})
 				.then(function(id) {
 					expect(id).to.equal(1);
 					return notificationDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notification) {
+					expect(notification)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
 							teacher_id: 1,
-							title: quiz.title,
-							content: recitation.content
+							title: QUIZ.title,
+							content: RECITATION.content
 						});
-					expect(result['updated_at'])
+					expect(notification['updated_at'])
 						.to.be.a('date')
-						.that.afterTime(result['created_at']);
+						.that.afterTime(notification['created_at']);
 				});
 		});
 
-		it('should NOT update title field if provided notification id does not exist', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		it('should NOT update if notification with matching id does not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
 					return notificationDAO.setTitle({
 						id: 2,
-						title: quiz.title
+						title: QUIZ.title
 					});
 				})
 				.catch(function(error) {
@@ -521,54 +407,40 @@ describe('Data Access Object: Notification', function() {
 	});
 
 	context('setContent', function() {
-		it('should update content field with value and return id', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should update content of notification, returning id', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function(id) {
-					return notificationDAO.setContent({
-						id,
-						content: quiz.content
-					});
+					return notificationDAO.setContent({ id, content: QUIZ.content });
 				})
 				.then(function(id) {
 					expect(id).to.equal(1);
 					return notificationDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notification) {
+					expect(notification)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
 							teacher_id: 1,
-							title: recitation.title,
-							content: quiz.content
+							title: RECITATION.title,
+							content: QUIZ.content
 						});
-					expect(result['updated_at'])
+					expect(notification['updated_at'])
 						.to.be.a('date')
-						.that.afterTime(result['created_at']);
+						.that.afterTime(notification['created_at']);
 				});
 		});
 
-		it('should NOT update content field if provided notification id does not exist', function() {
-			return teacherDAO
-				.create(john)
+		it('should NOT update if notification with matching id does not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
-				.then(function() {
-					return notificationDAO.setContent({
-						id: 2,
-						content: quiz.content
-					});
+					return notificationDAO.setContent({ id: 2, content: QUIZ.content });
 				})
 				.catch(function(error) {
 					expect(function() {
@@ -579,42 +451,35 @@ describe('Data Access Object: Notification', function() {
 	});
 
 	context('deleteById', function() {
-		it('should delete a row corresponding to provided id with returning values', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		beforeEach(function() {
+			return teacherDAO.create(JOHN);
+		});
+
+		it('should delete notification with matching id, returning attributes', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function(id) {
 					return notificationDAO.deleteById({ id });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notification) {
+					expect(notification)
 						.to.be.an('object')
 						.that.includes({
 							id: 1,
 							teacher_id: 1,
-							title: recitation.title,
-							content: recitation.content
+							title: RECITATION.title,
+							content: RECITATION.content
 						});
 					return notificationDAO.getById({ id: 1 });
 				})
-				.then(function(result) {
-					expect(result).to.be.an('undefined');
+				.then(function(notification) {
+					expect(notification).to.be.an('undefined');
 				});
 		});
-		it('should NOT delete a row if provided id does not exist', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+
+		it('should NOT delete if notification with matching id does not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
 					return notificationDAO.deleteById({ id: 2 });
 				})
@@ -627,114 +492,85 @@ describe('Data Access Object: Notification', function() {
 	});
 
 	context('deleteBySenderId', function() {
-		it('should delete matching rows corresponding to provided sender (teacher_id) with returning values', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.create(jane);
-				})
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		beforeEach(function() {
+			return teacherDAO.create(JOHN).then(function() {
+				return teacherDAO.create(JANE);
+			});
+		});
+
+		it('should delete all notifications with matching teacher id, returning array of attributes', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 2,
-						...recitation
+						...RECITATION
 					});
 				})
 				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...quiz
-					});
+					return notificationDAO.createBySenderId({ teacherId: 1, ...QUIZ });
 				})
 				.then(function() {
 					return notificationDAO.deleteBySenderId({ teacherId: 1 });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notifications) {
+					expect(notifications)
 						.to.be.an('array')
 						.of.length(2);
-					expect(result[0])
-						.to.be.an('object')
-						.that.includes({
+					expect(notifications).to.containSubset([
+						{
 							id: 1,
 							teacher_id: 1,
-							title: recitation.title,
-							content: recitation.content
-						});
-					expect(result[1])
-						.to.be.an('object')
-						.that.includes({
+							title: RECITATION.title,
+							content: RECITATION.content
+						},
+						{
 							id: 3,
 							teacher_id: 1,
-							title: quiz.title,
-							content: quiz.content
-						});
+							title: QUIZ.title,
+							content: QUIZ.content
+						}
+					]);
 					return db('notifications')
 						.whereIn('id', [1, 2, 3])
 						.select();
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notifications) {
+					expect(notifications)
 						.to.be.an('array')
 						.of.length(1);
-					expect(result[0])
+					expect(notifications[0])
 						.to.be.an('object')
 						.that.includes({
 							id: 2,
 							teacher_id: 2,
-							title: recitation.title,
-							content: recitation.content
+							title: RECITATION.title,
+							content: RECITATION.content
 						});
 				});
 		});
 
-		it('should NOT delete any rows if sender (teacher_id) does not exist', function() {
-			return teacherDAO
-				.create(john)
+		it('should NOT delete if teacher with matching id does not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
+					return notificationDAO.createBySenderId({ teacherId: 1, ...QUIZ });
 				})
 				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...quiz
-					});
-				})
-				.then(function() {
-					return notificationDAO.deleteBySenderId({ teacherId: 2 });
+					return notificationDAO.deleteBySenderId({ teacherId: 3 });
 				})
 				.catch(function(error) {
 					expect(function() {
 						throw error;
-					}).to.throw(Error, 'The teacher (id: 2) does not exist.');
+					}).to.throw(Error, 'The teacher (id: 3) does not exist.');
 				});
 		});
 
-		it('should NOT delete any rows, returning empty array if notifications created by sender (teacher_id) do not exist', function() {
-			return teacherDAO
-				.create(john)
+		it('should NOT delete, returning empty array if notifications with matching teacher id do not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 2, ...RECITATION })
 				.then(function() {
-					return teacherDAO.create(jane);
-				})
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 2,
-						...recitation
-					});
-				})
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 2,
-						...quiz
-					});
+					return notificationDAO.createBySenderId({ teacherId: 2, ...QUIZ });
 				})
 				.then(function() {
 					return notificationDAO.deleteBySenderId({ teacherId: 1 });
@@ -748,120 +584,91 @@ describe('Data Access Object: Notification', function() {
 	});
 
 	context('deleteBySenderEmail', function() {
-		it('should delete matching rows corresponding to provided sender (email) with returning values', function() {
-			return teacherDAO
-				.create(john)
-				.then(function() {
-					return teacherDAO.create(jane);
-				})
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
-				})
+		beforeEach(function() {
+			return teacherDAO.create(JOHN).then(function() {
+				return teacherDAO.create(JANE);
+			});
+		});
+
+		it('should delete all notifications with matching teacher, returning attributes', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
 					return notificationDAO.createBySenderId({
 						teacherId: 2,
-						...recitation
+						...RECITATION
 					});
 				})
 				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...quiz
-					});
+					return notificationDAO.createBySenderId({ teacherId: 1, ...QUIZ });
 				})
 				.then(function() {
-					return notificationDAO.deleteBySenderEmail({ email: john.email });
+					return notificationDAO.deleteBySenderEmail({ email: JOHN.email });
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notifications) {
+					expect(notifications)
 						.to.be.an('array')
 						.of.length(2);
-					expect(result[0])
-						.to.be.an('object')
-						.that.includes({
+					expect(notifications).to.containSubset([
+						{
 							id: 1,
 							teacher_id: 1,
-							title: recitation.title,
-							content: recitation.content
-						});
-					expect(result[1])
-						.to.be.an('object')
-						.that.includes({
+							title: RECITATION.title,
+							content: RECITATION.content
+						},
+						{
 							id: 3,
 							teacher_id: 1,
-							title: quiz.title,
-							content: quiz.content
-						});
+							title: QUIZ.title,
+							content: QUIZ.content
+						}
+					]);
 					return db('notifications')
 						.whereIn('id', [1, 2, 3])
 						.select();
 				})
-				.then(function(result) {
-					expect(result)
+				.then(function(notifications) {
+					expect(notifications)
 						.to.be.an('array')
 						.of.length(1);
-					expect(result[0])
+					expect(notifications[0])
 						.to.be.an('object')
 						.that.includes({
 							id: 2,
 							teacher_id: 2,
-							title: recitation.title,
-							content: recitation.content
+							title: RECITATION.title,
+							content: RECITATION.content
 						});
 				});
 		});
 
-		it('should NOT delete any rows if sender (email) does not exist', function() {
-			return teacherDAO
-				.create(john)
+		it('should NOT delete if teacher with matching email does not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 1, ...RECITATION })
 				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...recitation
-					});
+					return notificationDAO.createBySenderId({ teacherId: 1, ...QUIZ });
 				})
 				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 1,
-						...quiz
-					});
-				})
-				.then(function() {
-					return notificationDAO.deleteBySenderEmail({ email: jane.email });
+					return notificationDAO.deleteBySenderEmail({ email: BOB.email });
 				})
 				.catch(function(error) {
 					expect(function() {
 						throw error;
 					}).to.throw(
 						Error,
-						`The teacher (email: ${jane.email}) does not exist.`
+						`The teacher (email: ${BOB.email}) does not exist.`
 					);
 				});
 		});
 
-		it('should NOT delete any rows, returning empty array if notifications created by sender (email) do not exist', function() {
-			return teacherDAO
-				.create(john)
+		it('should NOT delete, returning empty array if notifications with matching teacher do not exist', function() {
+			return notificationDAO
+				.createBySenderId({ teacherId: 2, ...RECITATION })
 				.then(function() {
-					return teacherDAO.create(jane);
+					return notificationDAO.createBySenderId({ teacherId: 2, ...QUIZ });
 				})
 				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 2,
-						...recitation
-					});
-				})
-				.then(function() {
-					return notificationDAO.createBySenderId({
-						teacherId: 2,
-						...quiz
-					});
-				})
-				.then(function() {
-					return notificationDAO.deleteBySenderEmail({ email: john.email });
+					return notificationDAO.deleteBySenderEmail({ email: JOHN.email });
 				})
 				.then(function(notifications) {
 					expect(notifications)

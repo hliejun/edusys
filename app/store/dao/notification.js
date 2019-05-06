@@ -1,6 +1,4 @@
-const knex = require('knex');
-
-const config = require('../../../knexfile');
+const { db } = require('../knex');
 
 const {
 	MalformedResponseError,
@@ -8,20 +6,16 @@ const {
 	handle
 } = require('../../utils/errors');
 
-const teachers = require('./teacher');
+const teacherDAO = require('./teacher');
 
-const db = knex(config);
-
-const PRECISION_TIMESTAMP = 6;
-
-// TODO: Refactor
+const { PRECISION_TIMESTAMP, TABLE } = require('../../constants');
 
 // TODO: Scope select and first
 
 /* Creators */
 
 const create = ({ teacherId, title, content }) =>
-	db('notifications')
+	db(TABLE.NOTIFICATION)
 		.insert({
 			teacher_id: teacherId,
 			title,
@@ -37,10 +31,10 @@ const create = ({ teacherId, title, content }) =>
 		});
 
 const createBySenderId = ({ teacherId, title, content }) =>
-	teachers
+	teacherDAO
 		.getById({ id: teacherId })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
 			return create({ teacherId, title, content });
@@ -53,13 +47,13 @@ const createBySenderId = ({ teacherId, title, content }) =>
 		);
 
 const createBySenderEmail = ({ email, title, content }) =>
-	teachers
+	teacherDAO
 		.getByEmail({ email })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (email: ${email})`));
 			}
-			return create({ teacherId: result.id, title, content });
+			return create({ teacherId: teacher.id, title, content });
 		})
 		.catch(error =>
 			handle(
@@ -71,17 +65,17 @@ const createBySenderEmail = ({ email, title, content }) =>
 /* Readers */
 
 const getById = ({ id }) =>
-	db('notifications')
+	db(TABLE.NOTIFICATION)
 		.where({ id })
 		.first()
 		.catch(error => handle(error, `finding notification (id: ${id})`));
 
-// TODO: Add bulk read (using transactions)
+// FIXME: Add bulk read (using transactions)
 
 /* Updaters */
 
 const setTeacherId = ({ id, teacherId }) =>
-	db('notifications')
+	db(TABLE.NOTIFICATION)
 		.where({ id })
 		.update({
 			teacher_id: teacherId,
@@ -90,14 +84,14 @@ const setTeacherId = ({ id, teacherId }) =>
 
 const setSenderById = ({ id, teacherId }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(notification => {
+			if (notification == null) {
 				return Promise.reject(new NotFoundError(`notification (id: ${id})`));
 			}
-			return teachers.getById({ id: teacherId });
+			return teacherDAO.getById({ id: teacherId });
 		})
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
 			return setTeacherId({ id, teacherId });
@@ -111,17 +105,17 @@ const setSenderById = ({ id, teacherId }) =>
 
 const setSenderByEmail = ({ id, email }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(notification => {
+			if (notification == null) {
 				return Promise.reject(new NotFoundError(`notification (id: ${id})`));
 			}
-			return teachers.getByEmail({ email });
+			return teacherDAO.getByEmail({ email });
 		})
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (email: ${email})`));
 			}
-			return setTeacherId({ id, teacherId: result.id });
+			return setTeacherId({ id, teacherId: teacher.id });
 		})
 		.catch(error =>
 			handle(
@@ -132,11 +126,11 @@ const setSenderByEmail = ({ id, email }) =>
 
 const setTitle = ({ id, title }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(notification => {
+			if (notification == null) {
 				return Promise.reject(new NotFoundError(`notification (id: ${id})`));
 			}
-			return db('notifications')
+			return db(TABLE.NOTIFICATION)
 				.where({ id })
 				.update({ title, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
@@ -146,11 +140,11 @@ const setTitle = ({ id, title }) =>
 
 const setContent = ({ id, content }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(notification => {
+			if (notification == null) {
 				return Promise.reject(new NotFoundError(`notification (id: ${id})`));
 			}
-			return db('notifications')
+			return db(TABLE.NOTIFICATION)
 				.where({ id })
 				.update({ content, updated_at: db.fn.now(PRECISION_TIMESTAMP) });
 		})
@@ -165,74 +159,72 @@ const setContent = ({ id, content }) =>
 
 const deleteById = ({ id }) =>
 	getById({ id })
-		.then(result => {
-			if (result == null) {
+		.then(notification => {
+			if (notification == null) {
 				return Promise.reject(new NotFoundError(`notification (id: ${id})`));
 			}
 			return Promise.all([
-				Promise.resolve(result),
-				db('notifications')
+				Promise.resolve(notification),
+				db(TABLE.NOTIFICATION)
 					.where({ id })
 					.del()
 			]);
 		})
-		.then(([result]) => {
-			return Promise.resolve(result);
+		.then(([notification]) => {
+			return Promise.resolve(notification);
 		})
 		.catch(error => handle(error, `deleting notification (id: ${id})`));
 
-// TODO: Use transactions for bulk delete
-
 const selectByTeacher = ({ teacherId }) =>
-	db('notifications')
+	db(TABLE.NOTIFICATION)
 		.where({ teacher_id: teacherId })
 		.select();
 
 const deleteByTeacher = ({ teacherId }) =>
-	db('notifications')
+	db(TABLE.NOTIFICATION)
 		.where({ teacher_id: teacherId })
 		.del();
 
 const deleteBySenderId = ({ teacherId }) =>
-	teachers
+	teacherDAO
 		.getById({ id: teacherId })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (id: ${teacherId})`));
 			}
 			return selectByTeacher({ teacherId });
 		})
-		.then(result =>
+		.then(notifications =>
 			Promise.all([
-				Promise.resolve(result || []),
-				result == null || result.length === 0
+				Promise.resolve(notifications || []),
+				notifications == null || notifications.length === 0
 					? Promise.resolve(false)
 					: deleteByTeacher({ teacherId })
 			])
 		)
-		.then(([result]) => {
-			return Promise.resolve(result);
+		.then(([notifications]) => {
+			return Promise.resolve(notifications);
 		})
 		.catch(error =>
 			handle(error, `deleting notifications (sender id: ${teacherId})`)
 		);
 
 const deleteBySenderEmail = ({ email }) =>
-	teachers
+	teacherDAO
 		.getByEmail({ email })
-		.then(result => {
-			if (result == null) {
+		.then(teacher => {
+			if (teacher == null) {
 				return Promise.reject(new NotFoundError(`teacher (email: ${email})`));
 			}
 			return Promise.all([
-				Promise.resolve(result.id),
-				selectByTeacher({ teacherId: result.id })
+				Promise.resolve(teacher.id),
+				selectByTeacher({ teacherId: teacher.id })
 			]);
 		})
-		.then(([teacherId, result]) =>
+		.then(([teacherId, notifications]) =>
 			Promise.all([
-				Promise.resolve(result || []),
-				result == null || result.length === 0
+				Promise.resolve(notifications || []),
+				notifications == null || notifications.length === 0
 					? Promise.resolve(false)
 					: deleteByTeacher({ teacherId })
 			])

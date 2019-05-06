@@ -235,8 +235,7 @@ describe('Data Access Object: Teacher', function() {
 						.of.length(3);
 					expect(uniqueIds)
 						.to.be.an('array')
-						.of.length(2)
-						.that.contains.members([2, 3]);
+						.of.length(2);
 					return teacherDAO.getByIds(uniqueIds);
 				})
 				.then(function(teachers) {
