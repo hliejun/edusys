@@ -6,6 +6,8 @@ const path = require('path');
 
 const routes = require('./routes');
 
+// TODO: Add CORS, JWT and rate-limiting
+
 // Setup variables by environment
 dotenv.config({
 	path: path.resolve(__dirname, `../.env.${process.env.NODE_ENV}`)
