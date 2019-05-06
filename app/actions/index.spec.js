@@ -14,7 +14,7 @@ const { MATT, MAX, MAY } = STUDENTS;
 const { BOB, JANE, JOHN } = TEACHERS;
 const { COMPUTING, MATH } = CLASSES;
 
-describe.only('Actions: All', function() {
+describe('Actions: All', function() {
 	beforeEach(function() {
 		return store.data.migrate
 			.rollback()

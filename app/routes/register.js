@@ -1,6 +1,7 @@
 const express = require('express');
 const { check, validationResult } = require('express-validator/check');
 
+const validator = require('../utils/validator');
 const { registerStudents } = require('../actions');
 const { ERROR_MSG, ERROR_TYPES } = require('../constants');
 
@@ -34,18 +35,38 @@ app.use(express.json());
  */
 app.post(
 	'/register',
-	[check('teacher').isEmail(), check('students[*]').isEmail()],
+	[
+		check('students')
+			.custom(validator.isNonEmptyArray)
+			.withMessage('invalid array'),
+		check('teacher')
+			.isEmail()
+			.withMessage('invalid email'),
+		check('students[*]')
+			.isEmail()
+			.withMessage('invalid email')
+	],
 	(req, res) => {
 		const validationErrors = validationResult(req);
+		// Validation error handling
 		if (!validationErrors.isEmpty()) {
+			// Handle invalid students array
 			const errorDetails = validationErrors.array();
-			const invalidEmails = errorDetails.map(error => error.value);
+			if (errorDetails[0].msg === 'invalid array') {
+				return res.status(422).json({
+					message:
+						ERROR_MSG.MALFORMED_STUDENTS_ARRAY + ` ( ${req.body.students} )`
+				});
+			}
+			// Handle invalid emails
+			const invalidEmails = errorDetails.map(error =>
+				error.value === undefined ? 'undefined' : String(error.value)
+			);
 			return res.status(422).json({
-				message:
-					ERROR_MSG.MALFORMED_EMAILS +
-					`[ ${invalidEmails.toString().replace(',', ', ')} ]`
+				message: ERROR_MSG.MALFORMED_EMAILS + ` ( ${invalidEmails.toString()} )`
 			});
 		}
+		// Registration
 		const { teacher, students } = req.body;
 		registerStudents(teacher, students)
 			.then(() => {

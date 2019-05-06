@@ -33,3 +33,6 @@ app.listen(PORT, () => {
 	// eslint-disable-next-line no-console
 	console.log(`Server running in ${MODE} mode, listening on port ${PORT}...`);
 });
+
+// Testing compatibility
+module.exports = app;

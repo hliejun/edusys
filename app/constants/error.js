@@ -1,7 +1,9 @@
 const ERROR_MSG = {
 	UNSUPPORTED_ROUTES: 'Endpoint not found. This service route is unsupported.',
 	MALFORMED_EMAILS:
-		'One or more email addresses provided are malformed or invalid.'
+		'One or more email addresses provided are malformed or invalid.',
+	MALFORMED_STUDENTS_ARRAY:
+		'Expected "students" field to be a non-empty array of emails.'
 };
 
 const ERROR_TYPES = {
