@@ -36,7 +36,6 @@ const MALFORMED_EMAILS = [
 const MALFORMED_TEACHER = [undefined, null, 123, {}, []];
 
 describe('API Routes: Student', function() {
-	const apiPath = '/api/commonstudents';
 	beforeEach(function() {
 		return store.data.migrate
 			.rollback()
@@ -53,7 +52,9 @@ describe('API Routes: Student', function() {
 		return store.data.migrate.rollback();
 	});
 
-	context(`GET ${apiPath}`, function() {
+	context('GET /api/commonstudents', function() {
+		const apiPath = '/api/commonstudents';
+
 		beforeEach(function() {
 			return store.teachers
 				.bulkCreate([BOB, JOHN, JANE])
@@ -234,6 +235,119 @@ describe('API Routes: Student', function() {
 					.get(apiPath)
 					.query({
 						teacher: JOHN.email
+					})
+					.end((_, res) => {
+						res.should.have.status(500);
+						res.body.should.be.an('object');
+						res.body.should.have.property('message').equal(error.message);
+						done();
+					});
+			});
+		});
+	});
+
+	context('POST /api/suspend', function() {
+		const apiPath = '/api/suspend';
+
+		beforeEach(function() {
+			return store.students.bulkCreate([MAX]);
+		});
+
+		it('should validate and return status 204 when accepting valid existing student email as parameter', function(done) {
+			chai
+				.request(server)
+				.post(apiPath)
+				.send({
+					student: MAX.email
+				})
+				.end(function(_, res) {
+					res.should.have.status(204);
+					res.body.should.be.an('object');
+					res.body.should.deep.equal({});
+					done();
+				});
+		});
+
+		MALFORMED_EMAILS.forEach(function(input) {
+			it(`should validate and return status 400 when "student" field is not a valid email: ${JSON.stringify(
+				input
+			)}`, function(done) {
+				chai
+					.request(server)
+					.post(apiPath)
+					.send({
+						student: input
+					})
+					.end((_, res) => {
+						res.should.have.status(400);
+						res.body.should.be.an('object');
+						res.body.should.have
+							.property('message')
+							.equal(
+								`One or more email addresses provided are malformed or invalid. ( ${JSON.stringify(
+									input
+								)} )`
+							);
+						done();
+					});
+			});
+		});
+
+		it('should return status 422 with appropriate error messages when student with matching email does not exist', function(done) {
+			chai
+				.request(server)
+				.post(apiPath)
+				.send({
+					student: MAY.email
+				})
+				.end((_, res) => {
+					res.should.have.status(422);
+					res.body.should.be.an('object');
+					res.body.should.have
+						.property('message')
+						.equal(`The student (email: ${MAY.email}) does not exist.`);
+					done();
+				});
+		});
+
+		[
+			new IdenticalObjectError('This is an identical object error.'),
+			new NotFoundError('This is a not found error.'),
+			new UniqueConstraintError('This is an unique constraint error.')
+		].forEach(function(error) {
+			it(`should return status 422 with appropriate error messages when input-related errors are thrown: [ CODE: ${
+				error.code
+			} ]`, function(done) {
+				sandbox.stub(store.students, 'setSuspension').throws(error);
+				chai
+					.request(server)
+					.post(apiPath)
+					.send({
+						student: MAX.email
+					})
+					.end((_, res) => {
+						res.should.have.status(422);
+						res.body.should.be.an('object');
+						res.body.should.have.property('message').equal(error.message);
+						done();
+					});
+			});
+		});
+
+		[
+			new UnknownError('This is an unknown error.'),
+			new MalformedResponseError('This is a malformed response error.'),
+			new Error('This is a generic error.')
+		].forEach(function(error) {
+			it(`should return status 500 with propagated error messages when non input-related or unknown errors are thrown: [ CODE: ${
+				error.code
+			} ]`, function(done) {
+				sandbox.stub(store.students, 'setSuspension').throws(error);
+				chai
+					.request(server)
+					.post(apiPath)
+					.send({
+						student: MAX.email
 					})
 					.end((_, res) => {
 						res.should.have.status(500);

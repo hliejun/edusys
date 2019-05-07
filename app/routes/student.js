@@ -1,8 +1,13 @@
 const express = require('express');
-const { query, oneOf, validationResult } = require('express-validator/check');
+const {
+	check,
+	oneOf,
+	query,
+	validationResult
+} = require('express-validator/check');
 
 const validator = require('../utils/validator');
-const { findCommonStudents } = require('../actions');
+const { findCommonStudents, suspendStudent } = require('../actions');
 const { ERROR_MSG, ERROR_TYPES } = require('../constants');
 
 const app = (module.exports = express());
@@ -113,14 +118,42 @@ app.get(
  * @param {string} path - Express path
  * @param {callback} middleware - Express middleware.
  */
-app.post('/suspend', (req, res) => {
-	// get inputs
-	// validate and sanitize inputs
-	// invoke action with inputs
-	// receive action outputs on resolving promise
-	// build response and send
-	// catch errors generically and respond with status codes and messages
-	res.status(204).send();
-});
+app.post(
+	'/suspend',
+	[
+		check('student')
+			.exists()
+			.isEmail()
+	],
+	(req, res) => {
+		const validationErrors = validationResult(req);
+		// Validation error handling
+		if (!validationErrors.isEmpty()) {
+			return res.status(400).json({
+				message:
+					ERROR_MSG.MALFORMED_EMAILS +
+					` ( ${JSON.stringify(req.body.student)} )`
+			});
+		}
+		// Suspend student
+		suspendStudent(req.body.student)
+			.then(() => {
+				res.status(204).send();
+			})
+			.catch(error => {
+				let statusCode;
+				switch (error.code) {
+				case ERROR_TYPES.ER_IDEN_OBJECT:
+				case ERROR_TYPES.ER_NOT_FOUND:
+				case ERROR_TYPES.ER_UNIQ_CONSTRAINT:
+					statusCode = 422;
+					break;
+				default:
+					statusCode = 500;
+				}
+				res.status(statusCode).json({ message: error.message });
+			});
+	}
+);
 
 // FIXME: Add other student routes

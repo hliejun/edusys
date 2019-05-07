@@ -500,6 +500,19 @@ describe('Data Access Object: Student', function() {
 					expect(student).to.be.an('undefined');
 				});
 		});
+
+		it('should not return if is in strict mode and student with matching email does not exist', function() {
+			return studentDAO
+				.getByEmail({ email: MAY.email }, true)
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(
+						Error,
+						`The student (email: ${MAY.email}) does not exist.`
+					);
+				});
+		});
 	});
 
 	context('getByEmails', function() {

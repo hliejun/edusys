@@ -541,4 +541,50 @@ describe('Actions: All', function() {
 				});
 		});
 	});
+
+	context('suspendStudent', function() {
+		beforeEach(function() {
+			return store.students
+				.create(MAX)
+				.then(function(studentId) {
+					return store.students.getById({ id: studentId });
+				})
+				.then(function(student) {
+					expect(student)
+						.to.be.an('object')
+						.that.includes({
+							id: 1,
+							name: MAX.name,
+							email: MAX.email,
+							is_suspended: false
+						});
+				});
+		});
+
+		it('should suspend existing student with matching email', function() {
+			return actions
+				.suspendStudent(MAX.email)
+				.then(function() {
+					return store.students.getByEmail({ email: MAX.email });
+				})
+				.then(function(student) {
+					expect(student)
+						.to.be.an('object')
+						.that.includes({
+							id: 1,
+							name: MAX.name,
+							email: MAX.email,
+							is_suspended: true
+						});
+				});
+		});
+
+		it('should NOT suspend if student with matching email does not exist', function() {
+			return actions.suspendStudent(MAY.email).catch(function(error) {
+				expect(function() {
+					throw error;
+				}).to.throw(Error, `The student (email: ${MAY.email}) does not exist.`);
+			});
+		});
+	});
 });

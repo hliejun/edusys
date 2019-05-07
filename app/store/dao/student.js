@@ -119,10 +119,16 @@ const getByIds = ids =>
 		.select()
 		.catch(error => handle(error, `finding students (ids: ${ids})`));
 
-const getByEmail = ({ email }) =>
+const getByEmail = ({ email }, isStrict = false) =>
 	db(TABLE.STUDENT)
 		.where({ email })
 		.first()
+		.then(student => {
+			if (isStrict && student == null) {
+				return Promise.reject(new NotFoundError(`student (email: ${email})`));
+			}
+			return Promise.resolve(student);
+		})
 		.catch(error => handle(error, `finding student (email: ${email})`));
 
 const getByEmails = emails =>

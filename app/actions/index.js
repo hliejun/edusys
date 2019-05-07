@@ -73,7 +73,30 @@ const registerStudents = (teacherEmail, studentEmails, classTitle) =>
 			})
 	);
 
+/**
+ * Suspends a student by toggling the is_suspended flag.
+ *
+ * Student must exist for suspension to be processed.
+ * Student can be suspended by any teacher, regardless
+ * of the registration relationship.
+ *
+ * If the student cannot be found, an error will be thrown.
+ *
+ * @param {String} studentEmail
+ * Email of the student to suspend.
+ *
+ * @return {Promise}
+ * Promise that resolves into student id of the suspended student.
+ */
+const suspendStudent = studentEmail =>
+	store.students
+		.getByEmail({ email: studentEmail }, true)
+		.then(student =>
+			store.students.setSuspension({ id: student.id, isSuspended: true })
+		);
+
 module.exports = {
 	findCommonStudents,
-	registerStudents
+	registerStudents,
+	suspendStudent
 };
