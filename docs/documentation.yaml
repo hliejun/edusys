@@ -1,6 +1,6 @@
 openapi: 3.0.0
 info:
-  title: Ufinity Edusys
+  title: Edusys
   description: >-
     API endpoints for teachers to perform administrative functions for their
     classes.

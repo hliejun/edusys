@@ -21,9 +21,9 @@ This project focuses on the following:
 
 ## API Documentation
 
-This set of API endpoints is documented in a `Postman` collection at `/ufinity_edusys.postman_collection.json`. You can use it with Postman, or alternatively, use the Swagger UI documentation to browse API definitions and examples. 
+This set of API endpoints is documented in a `Postman` collection at `/edusys.postman_collection.json`. You can use it with Postman, view it [on a web browser](https://documenter.getpostman.com/view/4627841/S1LvUo9A), or alternatively, use the Swagger UI documentation to browse API definitions and examples. 
 
-You can access the documentation here: (github page link)
+You can access the documentation here: [Swagger API Documentation](https://hliejun.github.io/edusys/index.html)
 
 ## Development
 

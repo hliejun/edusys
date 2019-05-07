@@ -1,7 +1,7 @@
 {
 	"info": {
 		"_postman_id": "6f5114f4-d55a-4539-8c6b-627aae27f1dd",
-		"name": "Ufinity Edusys",
+		"name": "edusys",
 		"description": "API endpoints for teachers to perform administrative functions for their classes.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
