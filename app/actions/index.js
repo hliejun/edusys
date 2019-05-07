@@ -1,4 +1,5 @@
 const store = require('../store');
+const { getTaggedEmailsFromText } = require('../utils/parser');
 
 /**
  * Queries the students who are taught by all of the specified teachers.
@@ -23,6 +24,49 @@ const findCommonStudents = teacherEmails =>
 		})
 		.then(studentIds => store.students.getByIds(studentIds))
 		.then(students => Promise.resolve(students.map(student => student.email)));
+
+/**
+ * Find students eligible to receive a notification from teacher.
+ *
+ * Teacher must exist in the system and notification will not be created.
+ * This gives a preview of the potential recipients, who are
+ * identified by the following traits:
+ *   - student is not suspended
+ *   - student is either:
+ * 	     - registered with teacher, or...
+ * 			 - tagged in the notification with a prefixed '@'
+ * 				( e.g. @student@email.com )
+ *
+ * If the teacher sending the notification cannot be found,
+ * an error will be thrown.
+ *
+ * @param {String} teacherEmail
+ * Email of the teacher sending the notification.
+ *
+ * @param {String} notification
+ * Notification text containing notification content and any student tags.
+ *
+ * @return {Promise}
+ * Promise that resolves into student emails of eligible recipients.
+ */
+const getNotificationRecipients = (teacherEmail, notification) =>
+	store.teachers
+		.getByEmail({ email: teacherEmail }, true)
+		.then(teacher => store.registers.getStudentsOfTeachers([teacher.id]))
+		.then(studentIds => store.students.getByIds(studentIds))
+		.then(registeredStudents => {
+			const taggedEmails = getTaggedEmailsFromText(notification);
+			return Promise.all([
+				Promise.resolve(registeredStudents),
+				store.students.getByEmails(taggedEmails)
+			]).then(([registeredStudents, taggedStudents]) => {
+				const students = [...registeredStudents, ...taggedStudents];
+				const recipientEmails = students
+					.filter(student => !student['is_suspended'])
+					.map(student => student.email);
+				return Promise.resolve([...new Set(recipientEmails)]);
+			});
+		});
 
 /**
  * Registers a class of students under a specific teacher.
@@ -97,6 +141,7 @@ const suspendStudent = studentEmail =>
 
 module.exports = {
 	findCommonStudents,
+	getNotificationRecipients,
 	registerStudents,
 	suspendStudent
 };

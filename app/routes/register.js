@@ -30,7 +30,8 @@ app.use(express.json());
  * @function
  * @memberof module:routes/register
  * @inner
- * @param {string} path - Express path
+ * @param {string} path - Express path.
+ * @param {array} validators - Express input validation.
  * @param {callback} middleware - Express middleware.
  */
 app.post(

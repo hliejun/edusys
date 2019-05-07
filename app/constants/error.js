@@ -5,7 +5,8 @@ const ERROR_MSG = {
 	MALFORMED_STUDENTS_ARRAY:
 		'Expected "students" field to be a non-empty array of emails.',
 	MALFORMED_TEACHER:
-		'Expected "teacher" field to be an email or an array of emails.'
+		'Expected "teacher" field to be an email or an array of emails.',
+	MALFORMED_NOTIFICATION: 'Expected "notification" field to be a valid string.'
 };
 
 const ERROR_TYPES = {

@@ -5,10 +5,13 @@ const getNameFromEmail = email => (email.split('@') || [])[0];
 
 const getTagsFromText = text => text.match(REGEX_TAG) || [];
 
-const getEmailTagsFromText = text => getTagsFromText(text).filter(isValidEmail);
+const getTaggedEmailsFromText = text =>
+	getTagsFromText(text)
+		.map(emailTag => emailTag.substr(1))
+		.filter(text => isValidEmail(text));
 
 module.exports = {
-	getEmailTagsFromText,
 	getNameFromEmail,
+	getTaggedEmailsFromText,
 	getTagsFromText
 };

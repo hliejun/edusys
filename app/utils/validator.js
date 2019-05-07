@@ -13,7 +13,7 @@ const isNonEmptyArray = value => Array.isArray(value) && value.length > 0;
 const isValidClassTitle = title =>
 	title != null && title.length && title.length >= MIN_LENGTH_TITLE;
 
-const isValidEmail = REGEX_EMAIL.test;
+const isValidEmail = value => REGEX_EMAIL.test(value);
 
 const isValidName = name =>
 	name != null && name.length && name.length >= MIN_LENGTH_NAME;

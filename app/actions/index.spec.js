@@ -14,6 +14,8 @@ const { MATT, MAX, MAY } = STUDENTS;
 const { BOB, JANE, JOHN } = TEACHERS;
 const { COMPUTING, MATH } = CLASSES;
 
+const SAMPLE_NOTIFICATION = 'Test notification.';
+
 describe('Actions: All', function() {
 	beforeEach(function() {
 		return store.data.migrate
@@ -585,6 +587,137 @@ describe('Actions: All', function() {
 					throw error;
 				}).to.throw(Error, `The student (email: ${MAY.email}) does not exist.`);
 			});
+		});
+	});
+
+	context('getNotificationRecipients', function() {
+		beforeEach(function() {
+			return store.teachers
+				.bulkCreate([BOB, JOHN, JANE])
+				.then(function() {
+					return store.students.bulkCreate([MAX, MAY]);
+				})
+				.then(function() {
+					return store.students.create(MATT);
+				})
+				.then(function(id) {
+					return store.students.setSuspension({ id, isSuspended: true });
+				})
+				.then(function() {
+					return store.registers.createByEmail({
+						teacherEmail: JOHN.email,
+						studentEmail: MAX.email
+					});
+				})
+				.then(function() {
+					return store.registers.createByEmail({
+						teacherEmail: JOHN.email,
+						studentEmail: MATT.email
+					});
+				})
+				.then(function() {
+					return store.registers.createByEmail({
+						teacherEmail: JANE.email,
+						studentEmail: MAY.email
+					});
+				})
+				.then(function() {
+					return store.registers.createByEmail({
+						teacherEmail: JANE.email,
+						studentEmail: MATT.email
+					});
+				});
+		});
+
+		it('should retrieve all registered and non-suspended recipient emails for teacher without tags', function() {
+			return actions
+				.getNotificationRecipients(JOHN.email, SAMPLE_NOTIFICATION)
+				.then(function(emails) {
+					expect(emails)
+						.to.be.an('array')
+						.of.length(1)
+						.and.have.members([MAX.email]);
+					return actions.getNotificationRecipients(
+						JANE.email,
+						SAMPLE_NOTIFICATION
+					);
+				})
+				.then(function(emails) {
+					expect(emails)
+						.to.be.an('array')
+						.of.length(1)
+						.and.have.members([MAY.email]);
+					return actions.getNotificationRecipients(
+						BOB.email,
+						SAMPLE_NOTIFICATION
+					);
+				})
+				.then(function(emails) {
+					expect(emails)
+						.to.be.an('array')
+						.of.length(0);
+				});
+		});
+
+		it('should retrieve all registered and non-suspended recipient emails for teacher with qualifying tagged students', function() {
+			return actions
+				.getNotificationRecipients(
+					JOHN.email,
+					`${SAMPLE_NOTIFICATION} @${MATT.email} @${MAX.email} @${MAY.email}`
+				)
+				.then(function(emails) {
+					expect(emails)
+						.to.be.an('array')
+						.of.length(2)
+						.and.have.members([MAX.email, MAY.email]);
+					return actions.getNotificationRecipients(
+						JANE.email,
+						`${SAMPLE_NOTIFICATION} @${MATT.email} @${MAX.email} @${MAY.email}`
+					);
+				})
+				.then(function(emails) {
+					expect(emails)
+						.to.be.an('array')
+						.of.length(2)
+						.and.have.members([MAX.email, MAY.email]);
+					return actions.getNotificationRecipients(
+						BOB.email,
+						`${SAMPLE_NOTIFICATION} @${MATT.email} @${MAX.email} @${MAY.email}`
+					);
+				})
+				.then(function(emails) {
+					expect(emails)
+						.to.be.an('array')
+						.of.length(2)
+						.and.have.members([MAX.email, MAY.email]);
+				});
+		});
+
+		it('should retrieve all registered and non-suspended recipient emails for teacher ignoring non-existing student tags', function() {
+			return actions
+				.getNotificationRecipients(
+					JOHN.email,
+					`${SAMPLE_NOTIFICATION} @${BOB.email} @${MAY.email} @${MAY.email}`
+				)
+				.then(function(emails) {
+					expect(emails)
+						.to.be.an('array')
+						.of.length(2)
+						.and.have.members([MAX.email, MAY.email]);
+				});
+		});
+
+		it('should NOT retrieve if teacher with matching email does not exist', function() {
+			return actions
+				.getNotificationRecipients(MAY.email, `${SAMPLE_NOTIFICATION}`)
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(
+						Error,
+						`The teacher (email: ${MAY.email}) does not exist.`
+					);
+				});
 		});
 	});
 });

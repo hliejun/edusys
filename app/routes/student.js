@@ -35,7 +35,8 @@ app.use(express.json());
  * @function
  * @memberof module:routes/student
  * @inner
- * @param {string} path - Express path
+ * @param {string} path - Express path.
+ * @param {callback} validators - Express input validation.
  * @param {callback} middleware - Express middleware.
  */
 app.get(
@@ -115,7 +116,8 @@ app.get(
  * @function
  * @memberof module:routes/student
  * @inner
- * @param {string} path - Express path
+ * @param {string} path - Express path.
+ * @param {array} validators - Express input validation.
  * @param {callback} middleware - Express middleware.
  */
 app.post(
