@@ -1,0 +1,861 @@
+{
+	"info": {
+		"_postman_id": "6f5114f4-d55a-4539-8c6b-627aae27f1dd",
+		"name": "Ufinity Edusys",
+		"description": "API endpoints for teachers to perform administrative functions for their classes.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Student Registration",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"teacher\": \"teacherken@example.com\",\n    \"students\": [\n        \"studenthon@example.com\",\n        \"studention@example.com\",\n        \"studentjon@example.com\"\n    ]\n}"
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/api/register",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"api",
+						"register"
+					]
+				},
+				"description": "Route serving student registration.\n\nTakes a JSON body object as input:\n```\n{  \n  teacher: a valid teacher email,   \n  students: an array of valid student emails \n}\n```\n\nRegisters all students to the teacher, creating any teacher or students if not already in the system.\n\nResponds with `HTTP 204` on success.\n\nThrows:\n- `HTTP 400` when input is malformed, \n- `HTTP 422` when emails provided cannot be created by the database due to constraints, and ...\n- `HTTP 500` fo miscellaneous server errors."
+			},
+			"response": [
+				{
+					"name": "Error 400",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"teacher\": \"teacherkenexample.com\",\n    \"students\": [\n        \"studenthon@example.com\",\n        \"studention@example.com\",\n        \"studentjon@example.com\"\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/register",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"register"
+							]
+						}
+					},
+					"status": "Bad Request",
+					"code": 400,
+					"_postman_previewlanguage": "plain",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 07 May 2019 00:37:43 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"One or more email addresses provided are malformed or invalid. ( [\\\"teacherkenexample.com\\\"] )\"\n}"
+				},
+				{
+					"name": "Success 204",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"teacher\": \"teacherken@example.com\",\n    \"students\": [\n        \"studenthon@example.com\",\n        \"studention@example.com\",\n        \"studentjon@example.com\"\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/register",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"register"
+							]
+						}
+					},
+					"status": "No Content",
+					"code": 204,
+					"_postman_previewlanguage": "plain",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 07 May 2019 00:37:43 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						}
+					],
+					"cookie": [],
+					"body": null
+				}
+			]
+		},
+		{
+			"name": "Common Students",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/api/commonstudents?teacher=teacherken@example.com",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"api",
+						"commonstudents"
+					],
+					"query": [
+						{
+							"key": "teacher",
+							"value": "teacherken@example.com"
+						},
+						{
+							"key": "teacher",
+							"value": "teacherjoe@example.com",
+							"disabled": true
+						}
+					]
+				},
+				"description": "Route serving common students query.\n\nTakes an url query parameter as an input:\n```\n{\n  teacher: a valid teacher email or an array of valid teacher emails\n}\n```\n\nFinds students who are registered to the teacher email or all teacher emails in the array.\n\nResponds with `HTTP 200` and a JSON body object on success:\n```\n{\n  students: an array of valid student emails found in the query\n}\n```\n\nThrows:\n- `HTTP 400` when input is malformed, \n- `HTTP 422` when emails provided cannot be queried with due to constraints, and ...\n- `HTTP 500` fo miscellaneous server errors."
+			},
+			"response": [
+				{
+					"name": "Error 500",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/commonstudents?teacher=teacherken@example.com&teacher=teacherjoe@example.com",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"commonstudents"
+							],
+							"query": [
+								{
+									"key": "teacher",
+									"value": "teacherken@example.com"
+								},
+								{
+									"key": "teacher",
+									"value": "teacherjoe@example.com"
+								}
+							]
+						}
+					},
+					"status": "Internal Server Error",
+					"code": 500,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "108"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"6c-DwVN2cl3CnxqIKHZiMWrRtrHMZ0\""
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 07 May 2019 07:59:51 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"An unknown error occurred while finding teacher (email: teacherjoe@example.com).\\n Details: select * from `teachers` where `email` = 'teacherjoe@example.com' limit 1 - ER_NO_SUCH_TABLE: Table 'edusys_local.teachers' doesn't exist\"\n}"
+				},
+				{
+					"name": "Error 400",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/commonstudents?teacher=teacherkenexample.com",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"commonstudents"
+							],
+							"query": [
+								{
+									"key": "teacher",
+									"value": "teacherkenexample.com"
+								},
+								{
+									"key": "teacher",
+									"value": "teacherjoe@example.com",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"status": "Bad Request",
+					"code": 400,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "89"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"59-I6pTPw5ZZBpLNIXXZ0+wa/P9wdg\""
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 07 May 2019 07:56:26 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"Expected \\\"teacher\\\" field to be an email or an array of emails. ( \\\"teacherkenexample.com\\\" )\"\n}"
+				},
+				{
+					"name": "Error 422",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/commonstudents?teacher=teacherken@example.com&teacher=teacherjoe@example.com",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"commonstudents"
+							],
+							"query": [
+								{
+									"key": "teacher",
+									"value": "teacherken@example.com"
+								},
+								{
+									"key": "teacher",
+									"value": "teacherjoe@example.com"
+								}
+							]
+						}
+					},
+					"status": "Unprocessable Entity (WebDAV) (RFC 4918)",
+					"code": 422,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "108"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"6c-DwVN2cl3CnxqIKHZiMWrRtrHMZ0\""
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 07 May 2019 07:59:51 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"The teacher (email: teacherjoe@example.com) does not exist.\"\n}"
+				},
+				{
+					"name": "Success 200",
+					"originalRequest": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/commonstudents?teacher=teacherken@example.com",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"commonstudents"
+							],
+							"query": [
+								{
+									"key": "teacher",
+									"value": "teacherken@example.com"
+								},
+								{
+									"key": "teacher",
+									"value": "teacherjoe@example.com",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "89"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"59-I6pTPw5ZZBpLNIXXZ0+wa/P9wdg\""
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 07 May 2019 07:56:26 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"students\": [\n        \"studenthon@example.com\",\n        \"studention@example.com\",\n        \"studentjon@example.com\"\n    ]\n}"
+				}
+			]
+		},
+		{
+			"name": "Student Suspension",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"student\": \"studentjon@example.com\"\n}"
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/api/suspend",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"api",
+						"suspend"
+					]
+				},
+				"description": "Route serving student suspension.\n\nTakes a JSON body object as input:\n```\n{\n  student: a valid student email\n}\n```\n\nSuspends the student with the email by setting the suspension flag.\n\nResponds with `HTTP 204` on success.\n\nThrows:\n- `HTTP 400` when input is malformed, \n- `HTTP 422` when emails provided cannot be updated with due to constraints, and ...\n- `HTTP 500` fo miscellaneous server errors."
+			},
+			"response": [
+				{
+					"name": "Error 400",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"student\": \"studentjonexample.com\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/suspend",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"suspend"
+							]
+						}
+					},
+					"status": "Bad Request",
+					"code": 400,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "106"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"6a-Z+0t/GEdmzcpY84ME/up3ToVw+Q\""
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 07 May 2019 08:18:05 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"One or more email addresses provided are malformed or invalid. ( \\\"studentjonexample.com\\\" )\"\n}"
+				},
+				{
+					"name": "Success 200",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"student\": \"studentjon@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/suspend",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"suspend"
+							]
+						}
+					},
+					"status": "No Content",
+					"code": 204,
+					"_postman_previewlanguage": "plain",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 07 May 2019 08:17:32 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						}
+					],
+					"cookie": [],
+					"body": null
+				},
+				{
+					"name": "Error 422",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"student\": \"student@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/suspend",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"suspend"
+							]
+						}
+					},
+					"status": "Unprocessable Entity",
+					"code": 422,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "70"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"46-KnziJ9ZfiXBOSC5mtl+wegJnCnk\""
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 07 May 2019 08:18:41 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"The student (email: student@example.com) does not exist.\"\n}"
+				}
+			]
+		},
+		{
+			"name": "Notification Recipients",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"teacher\":  \"teacherken@example.com\",\r\n  \"notification\": \"Hello students! @studentagnes@example.com @studentmiche@example.com\"\r\n}\r\n"
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/api/retrievefornotifications",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"api",
+						"retrievefornotifications"
+					]
+				},
+				"description": "Route serving notification recipients query.\n\nTakes a JSON body object as input:\n```\n{\n  teacher: a valid teacher email\n  notification: a notification text containing student tag(s) that starts with '@', followed by a valid student email\n}\n```\n\nFinds students who are eligible recipients of the notification.\n\nResponds with `HTTP 200` and a JSON body object on success:\n```\n{\n  recipients: an array of valid student emails found in the query\n}\n```\n\nThrows:\n- `HTTP 400` when input is malformed, \n- `HTTP 422` when email provided cannot be used to query, and ...\n- `HTTP 500` fo miscellaneous server errors."
+			},
+			"response": [
+				{
+					"name": "Error 422",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"teacher\":  \"teacherjon@example.com\",\r\n  \"notification\": \"Hello students! @studentagnes@example.com @studentmiche@example.com\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/retrievefornotifications",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"retrievefornotifications"
+							]
+						}
+					},
+					"status": "Unprocessable Entity",
+					"code": 422,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "73"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"49-U7RW0RWbKHm9nigPZtj9Pr8Is60\""
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 07 May 2019 13:08:32 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"The teacher (email: teacherjon@example.com) does not exist.\"\n}"
+				},
+				{
+					"name": "Error 400",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"teacher\":  \"teacherkenexample.com\",\r\n  \"notification\": \"Hello students! @studentagnes@example.com @studentmiche@example.com\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/retrievefornotifications",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"retrievefornotifications"
+							]
+						}
+					},
+					"status": "Bad Request",
+					"code": 400,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "106"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"6a-k2f956AhTVjxEG8Ej+1RAxwIMs4\""
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 07 May 2019 13:07:59 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"message\": \"One or more email addresses provided are malformed or invalid. ( \\\"teacherkenexample.com\\\" )\"\n}"
+				},
+				{
+					"name": "Success 200",
+					"originalRequest": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"teacher\":  \"teacherken@example.com\",\r\n  \"notification\": \"Hello students! @studentagnes@example.com @studentmiche@example.com\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/retrievefornotifications",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"retrievefornotifications"
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "X-Powered-By",
+							"value": "Express"
+						},
+						{
+							"key": "Access-Control-Allow-Origin",
+							"value": "*"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json; charset=utf-8"
+						},
+						{
+							"key": "Content-Length",
+							"value": "91"
+						},
+						{
+							"key": "ETag",
+							"value": "W/\"5b-HpGtUxM9+/rKN5hce6KTsnVn/B4\""
+						},
+						{
+							"key": "Date",
+							"value": "Tue, 07 May 2019 13:06:40 GMT"
+						},
+						{
+							"key": "Connection",
+							"value": "keep-alive"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"recipients\": [\n        \"studenthon@example.com\",\n        \"studention@example.com\",\n        \"studentjon@example.com\"\n    ]\n}"
+				}
+			]
+		}
+	]
+}

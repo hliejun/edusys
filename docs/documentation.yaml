@@ -1,1 +1,566 @@
-# TODO: Save Swagger documentation in Open API 3.0 format here...
+openapi: 3.0.0
+info:
+  title: Ufinity Edusys
+  description: >-
+    API endpoints for teachers to perform administrative functions for their
+    classes.
+  contact: {}
+  version: '1.0'
+servers:
+  - url: 'http://example.com/api'
+    variables: {}
+paths:
+  /register:
+    post:
+      tags:
+        - Misc
+      summary: Student Registration
+      description: >-
+        Route serving student registration.
+
+
+        Takes a JSON body object as input:
+
+        ```
+
+        {  
+          teacher: a valid teacher email,   
+          students: an array of valid student emails 
+        }
+
+        ```
+
+
+        Registers all students to the teacher, creating any teacher or students
+        if not already in the system.
+
+
+        Responds with `HTTP 204` on success.
+
+
+        Throws:
+
+        - `HTTP 400` when input is malformed, 
+
+        - `HTTP 422` when emails provided cannot be created by the database due
+        to constraints, and ...
+
+        - `HTTP 500` fo miscellaneous server errors.
+      operationId: StudentRegistration
+      parameters:
+        - name: Content-Type
+          in: header
+          description: ''
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: string
+            example: application/json
+      requestBody:
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentRegistrationRequest'
+            example:
+              teacher: teacherken@example.com
+              students:
+                - studenthon@example.com
+                - studention@example.com
+                - studentjon@example.com
+        required: true
+      responses:
+        '204':
+          description: ''
+          headers:
+            X-Powered-By:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: Express
+            Access-Control-Allow-Origin:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: '*'
+            Date:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: 'Tue, 07 May 2019 00:37:43 GMT'
+            Connection:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: keep-alive
+          content:
+            text/plain:
+              schema:
+                type: object
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+              example:
+                message: >-
+                  One or more email addresses provided are malformed or invalid.
+                  ( ["teacherkenexample.com"] )
+      deprecated: false
+  /commonstudents:
+    get:
+      tags:
+        - Misc
+      summary: Common Students
+      description: >-
+        Route serving common students query.
+
+
+        Takes an url query parameter as an input:
+
+        ```
+
+        {
+          teacher: a valid teacher email or an array of valid teacher emails
+        }
+
+        ```
+
+
+        Finds students who are registered to the teacher email or all teacher
+        emails in the array.
+
+
+        Responds with `HTTP 200` and a JSON body object on success:
+
+        ```
+
+        {
+          students: an array of valid student emails found in the query
+        }
+
+        ```
+
+
+        Throws:
+
+        - `HTTP 400` when input is malformed, 
+
+        - `HTTP 422` when emails provided cannot be queried with due to
+        constraints, and ...
+
+        - `HTTP 500` fo miscellaneous server errors.
+      operationId: CommonStudents
+      parameters:
+        - name: teacher
+          in: query
+          description: ''
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: string
+            example: teacherken@example.com
+      responses:
+        '200':
+          description: ''
+          headers:
+            X-Powered-By:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: Express
+            Access-Control-Allow-Origin:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: '*'
+            Content-Length:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: '89'
+            ETag:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: W/"59-I6pTPw5ZZBpLNIXXZ0+wa/P9wdg"
+            Date:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: 'Tue, 07 May 2019 07:56:26 GMT'
+            Connection:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: keep-alive
+          content:
+            application/json; charset=utf-8:
+              schema:
+                $ref: '#/components/schemas/Success200'
+              example:
+                students:
+                  - studenthon@example.com
+                  - studention@example.com
+                  - studentjon@example.com
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+              example:
+                message: >-
+                  Expected "teacher" field to be an email or an array of emails.
+                  ( "teacherkenexample.com" )
+        '422':
+          description: Unprocessable Entity (WebDAV) (RFC 4918)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+              example:
+                message: 'The teacher (email: teacherjoe@example.com) does not exist.'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+              example:
+                message: >-
+                  An unknown error occurred while finding teacher (email:
+                  teacherjoe@example.com).
+                   Details: select * from `teachers` where `email` = 'teacherjoe@example.com' limit 1 - ER_NO_SUCH_TABLE: Table 'edusys_local.teachers' doesn't exist
+      deprecated: false
+  /suspend:
+    post:
+      tags:
+        - Misc
+      summary: Student Suspension
+      description: >-
+        Route serving student suspension.
+
+
+        Takes a JSON body object as input:
+
+        ```
+
+        {
+          student: a valid student email
+        }
+
+        ```
+
+
+        Suspends the student with the email by setting the suspension flag.
+
+
+        Responds with `HTTP 204` on success.
+
+
+        Throws:
+
+        - `HTTP 400` when input is malformed, 
+
+        - `HTTP 422` when emails provided cannot be updated with due to
+        constraints, and ...
+
+        - `HTTP 500` fo miscellaneous server errors.
+      operationId: StudentSuspension
+      parameters:
+        - name: Content-Type
+          in: header
+          description: ''
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: string
+            example: application/json
+      requestBody:
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StudentSuspensionRequest'
+            example:
+              student: studentjon@example.com
+        required: true
+      responses:
+        '204':
+          description: ''
+          headers:
+            X-Powered-By:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: Express
+            Access-Control-Allow-Origin:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: '*'
+            Date:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: 'Tue, 07 May 2019 08:17:32 GMT'
+            Connection:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: keep-alive
+          content:
+            text/plain:
+              schema:
+                type: object
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+              example:
+                message: >-
+                  One or more email addresses provided are malformed or invalid.
+                  ( "studentjonexample.com" )
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+              example:
+                message: 'The student (email: student@example.com) does not exist.'
+      deprecated: false
+  /retrievefornotifications:
+    post:
+      tags:
+        - Misc
+      summary: Notification Recipients
+      description: |-
+        Route serving notification recipients query.
+
+        Takes a JSON body object as input:
+        ```
+        {
+          teacher: a valid teacher email
+          notification: a notification text containing student tag(s) that starts with '@', followed by a valid student email
+        }
+        ```
+
+        Finds students who are eligible recipients of the notification.
+
+        Responds with `HTTP 200` and a JSON body object on success:
+        ```
+        {
+          recipients: an array of valid student emails found in the query
+        }
+        ```
+
+        Throws:
+        - `HTTP 400` when input is malformed, 
+        - `HTTP 422` when email provided cannot be used to query, and ...
+        - `HTTP 500` fo miscellaneous server errors.
+      operationId: NotificationRecipients
+      parameters:
+        - name: Content-Type
+          in: header
+          description: ''
+          required: true
+          style: simple
+          explode: false
+          schema:
+            type: string
+            example: application/json
+      requestBody:
+        description: ''
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRecipientsRequest'
+            example:
+              teacher: teacherken@example.com
+              notification: >-
+                Hello students! @studentagnes@example.com
+                @studentmiche@example.com
+        required: true
+      responses:
+        '200':
+          description: ''
+          headers:
+            X-Powered-By:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: Express
+            Access-Control-Allow-Origin:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: '*'
+            Content-Length:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: '91'
+            ETag:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: W/"5b-HpGtUxM9+/rKN5hce6KTsnVn/B4"
+            Date:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: 'Tue, 07 May 2019 13:06:40 GMT'
+            Connection:
+              content:
+                text/plain:
+                  schema:
+                    type: string
+                  example: keep-alive
+          content:
+            application/json; charset=utf-8:
+              schema:
+                $ref: '#/components/schemas/Success2001'
+              example:
+                recipients:
+                  - studenthon@example.com
+                  - studention@example.com
+                  - studentjon@example.com
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+              example:
+                message: >-
+                  One or more email addresses provided are malformed or invalid.
+                  ( "teacherkenexample.com" )
+        '422':
+          description: Unprocessable Entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error400'
+              example:
+                message: 'The teacher (email: teacherjon@example.com) does not exist.'
+      deprecated: false
+components:
+  schemas:
+    StudentRegistrationRequest:
+      title: StudentRegistrationRequest
+      required:
+        - teacher
+        - students
+      type: object
+      properties:
+        teacher:
+          type: string
+        students:
+          type: array
+          items:
+            type: string
+          description: ''
+      example:
+        teacher: teacherken@example.com
+        students:
+          - studenthon@example.com
+          - studention@example.com
+          - studentjon@example.com
+    Error400:
+      title: Error400
+      required:
+        - message
+      type: object
+      properties:
+        message:
+          type: string
+      example:
+        message: >-
+          One or more email addresses provided are malformed or invalid. (
+          ["teacherkenexample.com"] )
+    Success200:
+      title: Success200
+      required:
+        - students
+      type: object
+      properties:
+        students:
+          type: array
+          items:
+            type: string
+          description: ''
+      example:
+        students:
+          - studenthon@example.com
+          - studention@example.com
+          - studentjon@example.com
+    StudentSuspensionRequest:
+      title: StudentSuspensionRequest
+      required:
+        - student
+      type: object
+      properties:
+        student:
+          type: string
+      example:
+        student: studentjon@example.com
+    NotificationRecipientsRequest:
+      title: NotificationRecipientsRequest
+      required:
+        - teacher
+        - notification
+      type: object
+      properties:
+        teacher:
+          type: string
+        notification:
+          type: string
+      example:
+        teacher: teacherken@example.com
+        notification: Hello students! @studentagnes@example.com @studentmiche@example.com
+    Success2001:
+      title: Success2001
+      required:
+        - recipients
+      type: object
+      properties:
+        recipients:
+          type: array
+          items:
+            type: string
+          description: ''
+      example:
+        recipients:
+          - studenthon@example.com
+          - studention@example.com
+          - studentjon@example.com
+tags:
+  - name: Misc
+    description: ''
