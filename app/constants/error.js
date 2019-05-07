@@ -3,7 +3,9 @@ const ERROR_MSG = {
 	MALFORMED_EMAILS:
 		'One or more email addresses provided are malformed or invalid.',
 	MALFORMED_STUDENTS_ARRAY:
-		'Expected "students" field to be a non-empty array of emails.'
+		'Expected "students" field to be a non-empty array of emails.',
+	MALFORMED_TEACHER:
+		'Expected "teacher" field to be an email or an array of emails.'
 };
 
 const ERROR_TYPES = {

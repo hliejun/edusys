@@ -14,6 +14,8 @@
     "migrate:latest": "NODE_ENV=production node_modules/.bin/knex migrate:latest",
     "migrate:staging": "NODE_ENV=staging node_modules/.bin/knex migrate:make",
     "migrate:staging-latest": "NODE_ENV=staging node_modules/.bin/knex migrate:latest",
+    "rollback:dev": "NODE_ENV=development node_modules/.bin/knex migrate:rollback",
+    "rollback:staging": "NODE_ENV=staging node_modules/.bin/knex migrate:rollback",
     "seed": "NODE_ENV=production node_modules/.bin/knex seed:make",
     "seed:dev": "NODE_ENV=development node_modules/.bin/knex seed:make",
     "seed:staging": "NODE_ENV=staging node_modules/.bin/knex seed:make",

@@ -96,9 +96,9 @@ describe('API Routes: Register', function() {
 		});
 
 		[...MALFORMED_STRINGS, ...MALFORMED_EMAILS].forEach(function(input) {
-			it(`should validate and return status 422 when teacher email is malformed: ${
-				!input ? input : String(input)
-			}`, function(done) {
+			it(`should validate and return status 400 when teacher email is malformed: ${JSON.stringify(
+				input
+			)}`, function(done) {
 				chai
 					.request(server)
 					.post(apiPath)
@@ -107,12 +107,14 @@ describe('API Routes: Register', function() {
 						students: [MAX.email, MAY.email]
 					})
 					.end((_, res) => {
-						res.should.have.status(422);
+						res.should.have.status(400);
 						res.body.should.be.an('object');
 						res.body.should.have
 							.property('message')
 							.equal(
-								`One or more email addresses provided are malformed or invalid. ( ${input} )`
+								`One or more email addresses provided are malformed or invalid. ( ${JSON.stringify(
+									[input]
+								)} )`
 							);
 						done();
 					});
@@ -120,9 +122,9 @@ describe('API Routes: Register', function() {
 		});
 
 		MALFORMED_ARRAYS.forEach(function(input) {
-			it(`should validate and return status 422 when "students" field is not an array or is empty array: ${
-				!input ? input : String(input)
-			}`, function(done) {
+			it(`should validate and return status 400 when "students" field is not an array or is empty array: ${JSON.stringify(
+				input
+			)}`, function(done) {
 				chai
 					.request(server)
 					.post(apiPath)
@@ -131,19 +133,21 @@ describe('API Routes: Register', function() {
 						students: input
 					})
 					.end((_, res) => {
-						res.should.have.status(422);
+						res.should.have.status(400);
 						res.body.should.be.an('object');
 						res.body.should.have
 							.property('message')
 							.equal(
-								`Expected "students" field to be a non-empty array of emails. ( ${input} )`
+								`Expected "students" field to be a non-empty array of emails. ( ${JSON.stringify(
+									input
+								)} )`
 							);
 						done();
 					});
 			});
 		});
 
-		it('should validate and return status 422 when student email(s) are malformed', function(done) {
+		it('should validate and return status 400 when student email(s) are malformed', function(done) {
 			chai
 				.request(server)
 				.post(apiPath)
@@ -152,12 +156,14 @@ describe('API Routes: Register', function() {
 					students: [...MALFORMED_EMAILS, MAX.email, MAY.email]
 				})
 				.end((_, res) => {
-					res.should.have.status(422);
+					res.should.have.status(400);
 					res.body.should.be.an('object');
 					res.body.should.have
 						.property('message')
 						.equal(
-							`One or more email addresses provided are malformed or invalid. ( ${MALFORMED_EMAILS} )`
+							`One or more email addresses provided are malformed or invalid. ( ${JSON.stringify(
+								[...MALFORMED_EMAILS]
+							)} )`
 						);
 					done();
 				});

@@ -433,4 +433,112 @@ describe('Actions: All', function() {
 			});
 		});
 	});
+
+	context('findCommonStudents', function() {
+		beforeEach(function() {
+			return store.teachers
+				.bulkCreate([BOB, JOHN, JANE])
+				.then(function() {
+					return store.students.bulkCreate([MAX, MAY, MATT]);
+				})
+				.then(function() {
+					return store.registers.createByEmail({
+						teacherEmail: JOHN.email,
+						studentEmail: MAX.email
+					});
+				})
+				.then(function() {
+					return store.registers.createByEmail({
+						teacherEmail: JOHN.email,
+						studentEmail: MATT.email
+					});
+				})
+				.then(function() {
+					return store.registers.createByEmail({
+						teacherEmail: JANE.email,
+						studentEmail: MAY.email
+					});
+				})
+				.then(function() {
+					return store.registers.createByEmail({
+						teacherEmail: JANE.email,
+						studentEmail: MATT.email
+					});
+				});
+		});
+
+		it('should read all students registered under teacher if array is size 1, returning student emails', function() {
+			return actions
+				.findCommonStudents([JOHN.email])
+				.then(function(studentEmails) {
+					expect(studentEmails)
+						.to.be.an('array')
+						.of.length(2);
+					expect(studentEmails).to.have.members([MAX.email, MATT.email]);
+					return actions.findCommonStudents([JANE.email]);
+				})
+				.then(function(studentEmails) {
+					expect(studentEmails)
+						.to.be.an('array')
+						.of.length(2);
+					expect(studentEmails).to.have.members([MAY.email, MATT.email]);
+					return actions.findCommonStudents([BOB.email]);
+				})
+				.then(function(studentEmails) {
+					expect(studentEmails)
+						.to.be.an('array')
+						.of.length(0);
+				});
+		});
+
+		it('should read all common students registered under all teachers in array, returning student emails', function() {
+			return actions
+				.findCommonStudents([JOHN.email, JANE.email])
+				.then(function(studentEmails) {
+					expect(studentEmails)
+						.to.be.an('array')
+						.of.length(1);
+					expect(studentEmails).to.have.members([MATT.email]);
+				});
+		});
+
+		it('should read no common students if at least 1 teacher has exclusive student(s), returning empty array', function() {
+			return actions
+				.findCommonStudents([JOHN.email, BOB.email])
+				.then(function(studentEmails) {
+					expect(studentEmails)
+						.to.be.an('array')
+						.of.length(0);
+					return actions.findCommonStudents([JANE.email, BOB.email]);
+				})
+				.then(function(studentEmails) {
+					expect(studentEmails)
+						.to.be.an('array')
+						.of.length(0);
+					return actions.findCommonStudents([
+						JANE.email,
+						JOHN.email,
+						BOB.email
+					]);
+				})
+				.then(function(studentEmails) {
+					expect(studentEmails)
+						.to.be.an('array')
+						.of.length(0);
+				});
+		});
+
+		it('should not read if 1 or more teachers in array do not exist', function() {
+			return actions
+				.findCommonStudents([JOHN.email, MAX.email])
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(
+						Error,
+						`The teacher (email: ${MAX.email}) does not exist.`
+					);
+				});
+		});
+	});
 });

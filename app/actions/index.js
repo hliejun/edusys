@@ -1,6 +1,30 @@
 const store = require('../store');
 
 /**
+ * Queries the students who are taught by all of the specified teachers.
+ *
+ * Teachers in the query must already exist, or errors will be thrown.
+ *
+ * @param {Array<String>} teacherEmails
+ * Emails of teachers that students must be registered with.
+ *
+ * @return {Promise}
+ * Promise that resolves into an array of student emails.
+ */
+const findCommonStudents = teacherEmails =>
+	Promise.all(
+		teacherEmails.map(teacherEmail =>
+			store.teachers.getByEmail({ email: teacherEmail }, true)
+		)
+	)
+		.then(teachers => {
+			const teacherIds = teachers.map(teacher => teacher.id);
+			return store.registers.getStudentsOfTeachers(teacherIds);
+		})
+		.then(studentIds => store.students.getByIds(studentIds))
+		.then(students => Promise.resolve(students.map(student => student.email)));
+
+/**
  * Registers a class of students under a specific teacher.
  *
  * Teacher, class and students are created on demand with
@@ -50,5 +74,6 @@ const registerStudents = (teacherEmail, studentEmails, classTitle) =>
 	);
 
 module.exports = {
+	findCommonStudents,
 	registerStudents
 };

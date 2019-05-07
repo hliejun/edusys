@@ -508,6 +508,19 @@ describe('Data Access Object: Teacher', function() {
 					expect(teacher).to.be.an('undefined');
 				});
 		});
+
+		it('should NOT read if in strict mode and teacher with matching email does not exist', function() {
+			return teacherDAO
+				.getByEmail({ email: BOB.email }, true)
+				.catch(function(error) {
+					expect(function() {
+						throw error;
+					}).to.throw(
+						Error,
+						`The teacher (email: ${BOB.email}) does not exist.`
+					);
+				});
+		});
 	});
 
 	context('getByEmails', function() {

@@ -50,20 +50,20 @@ app.post(
 		const validationErrors = validationResult(req);
 		// Validation error handling
 		if (!validationErrors.isEmpty()) {
-			// Handle invalid students array
 			const errorDetails = validationErrors.array();
+			// Handle invalid students array
 			if (errorDetails[0].msg === 'invalid array') {
-				return res.status(422).json({
+				return res.status(400).json({
 					message:
-						ERROR_MSG.MALFORMED_STUDENTS_ARRAY + ` ( ${req.body.students} )`
+						ERROR_MSG.MALFORMED_STUDENTS_ARRAY +
+						` ( ${JSON.stringify(req.body.students)} )`
 				});
 			}
 			// Handle invalid emails
-			const invalidEmails = errorDetails.map(error =>
-				error.value === undefined ? 'undefined' : String(error.value)
-			);
-			return res.status(422).json({
-				message: ERROR_MSG.MALFORMED_EMAILS + ` ( ${invalidEmails.toString()} )`
+			const invalidEmails = errorDetails.map(error => error.value);
+			return res.status(400).json({
+				message:
+					ERROR_MSG.MALFORMED_EMAILS + ` ( ${JSON.stringify(invalidEmails)} )`
 			});
 		}
 		// Registration

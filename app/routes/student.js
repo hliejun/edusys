@@ -1,4 +1,12 @@
-const app = (module.exports = require('express')());
+const express = require('express');
+const { query, oneOf, validationResult } = require('express-validator/check');
+
+const validator = require('../utils/validator');
+const { findCommonStudents } = require('../actions');
+const { ERROR_MSG, ERROR_TYPES } = require('../constants');
+
+const app = (module.exports = express());
+app.use(express.json());
 
 /* =================================== */
 /*    Endpoint #2: Common Students     */
@@ -7,10 +15,10 @@ const app = (module.exports = require('express')());
 /**
  * Route serving common students query.
  *
- * Takes an url parameter as an input:
- *   teacher: an array of valid teacher emails
+ * Takes an url query parameter as an input:
+ *   teacher: a valid teacher email or an array of valid teacher emails
  *
- * Finds students who are registered to all teacher emails
+ * Finds students who are registered to the teacher email or all teacher emails
  * in the array.
  *
  * Responds with HTTP 200 and a JSON body object on success:
@@ -25,15 +33,61 @@ const app = (module.exports = require('express')());
  * @param {string} path - Express path
  * @param {callback} middleware - Express middleware.
  */
-app.get('/commonstudents', (req, res) => {
-	// get inputs
-	// validate and sanitize inputs
-	// invoke action with inputs
-	// receive action outputs on resolving promise
-	// build response and send
-	// catch errors generically and respond with status codes and messages
-	res.status(200).send();
-});
+app.get(
+	'/commonstudents',
+	oneOf([
+		[
+			query('teacher')
+				.exists()
+				.isString()
+				.withMessage('invalid type'),
+			query('teacher')
+				.isEmail()
+				.withMessage('invalid email')
+		],
+		[
+			query('teacher')
+				.exists()
+				.custom(validator.isNonEmptyArray)
+				.withMessage('invalid type'),
+			query('teacher[*]')
+				.isEmail()
+				.withMessage('invalid email')
+		]
+	]),
+	(req, res) => {
+		const validationErrors = validationResult(req);
+		// Validation error handling
+		if (!validationErrors.isEmpty()) {
+			return res.status(400).json({
+				message:
+					ERROR_MSG.MALFORMED_TEACHER +
+					` ( ${JSON.stringify(req.query.teacher)} )`
+			});
+		}
+		// Data sanitisation
+		const teachers = [].concat(req.query.teacher);
+		const uniqueTeachers = [...new Set(teachers)];
+		// Find common students
+		findCommonStudents(uniqueTeachers)
+			.then(studentEmails => {
+				res.status(200).json({ students: studentEmails });
+			})
+			.catch(error => {
+				let statusCode;
+				switch (error.code) {
+				case ERROR_TYPES.ER_IDEN_OBJECT:
+				case ERROR_TYPES.ER_NOT_FOUND:
+				case ERROR_TYPES.ER_UNIQ_CONSTRAINT:
+					statusCode = 422;
+					break;
+				default:
+					statusCode = 500;
+				}
+				res.status(statusCode).json({ message: error.message });
+			});
+	}
+);
 
 /* =================================== */
 /*    Endpoint #3: Suspend Students    */
