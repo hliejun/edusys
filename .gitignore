@@ -20,6 +20,9 @@ ehthumbs.db
 !.env.example
 *.pem
 
+# Build files
+dist
+
 # Google App Engine
 app.yaml
 appengine-generated/
