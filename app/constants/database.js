@@ -4,7 +4,8 @@ const DEFAULT_TEACHER_PASSWORD = 'password';
 
 const PRECISION_TIMESTAMP = 6;
 
-const SALT_ROUNDS = process.env.NODE_ENV === 'development' ? 5 : 12;
+// NOTE: actual production should use at least 12
+const SALT_ROUNDS = process.env.NODE_ENV === 'development' ? 0 : 1;
 
 const TABLE = {
 	CLASS: 'classes',

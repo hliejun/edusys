@@ -25,4 +25,5 @@ dist
 
 # Google App Engine
 app.yaml
+cloudbuild.yaml
 appengine-generated/

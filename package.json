@@ -4,24 +4,25 @@
   "description": "administrative service for educators",
   "main": "app/server.js",
   "engines": {
-    "node": ">=8.10.0"
+    "node": "10"
   },
   "scripts": {
     "build": "NODE_ENV=production babel app --out-dir dist",
-    "migrate": "NODE_ENV=production node_modules/.bin/knex migrate:latest",
-    "migrate:dev": "NODE_ENV=development node_modules/.bin/knex migrate:latest",
-    "migrate:make": "NODE_ENV=development node_modules/.bin/knex migrate:make",
-    "migrate:staging": "NODE_ENV=staging node_modules/.bin/knex migrate:latest",
-    "rollback:dev": "NODE_ENV=development node_modules/.bin/knex migrate:rollback",
-    "rollback:staging": "NODE_ENV=staging node_modules/.bin/knex migrate:rollback",
-    "seed": "NODE_ENV=production node_modules/.bin/knex seed:run",
-    "seed:dev": "NODE_ENV=development node_modules/.bin/knex seed:run",
-    "seed:make": "NODE_ENV=development node_modules/.bin/knex seed:make",
-    "seed:staging": "NODE_ENV=staging node_modules/.bin/knex seed:run",
+    "lint": "eslint --ext .js app",
+    "migrate": "NODE_ENV=production knex migrate:latest",
+    "migrate:dev": "NODE_ENV=development knex migrate:latest",
+    "migrate:make": "NODE_ENV=development knex migrate:make",
+    "rollback": "NODE_ENV=production knex migrate:rollback",
+    "rollback:dev": "NODE_ENV=development knex migrate:rollback",
+    "seed": "NODE_ENV=production knex seed:run",
+    "seed:dev": "NODE_ENV=development knex seed:run",
+    "seed:make": "NODE_ENV=development knex seed:make",
+    "serve:dev": "NODE_ENV=development nodemon --exec babel-node app/server.js",
+    "gcp-build": "NODE_ENV=production babel app --out-dir dist",
     "start": "NODE_ENV=production node dist/server.js",
-    "start:dev": "NODE_ENV=development nodemon --exec babel-node app/server.js",
-    "test:dev": "find ./app -name '*.spec.js' | NODE_ENV=development xargs ./node_modules/.bin/mocha --require @babel/register --require babel-polyfill -R spec --exit",
-    "test:staging": "find ./app -name '*.spec.js' | NODE_ENV=staging xargs ./node_modules/.bin/mocha --require @babel/register --require babel-polyfill -R spec --exit"
+    "start:dev": "run-s migrate:dev seed:dev serve:dev",
+    "test:dev": "find ./app -name '*.spec.js' | NODE_ENV=development xargs mocha --require @babel/register --require babel-polyfill -R spec --exit",
+    "test": "find ./app -name '*.spec.js' | NODE_ENV=production xargs mocha --require @babel/register --require babel-polyfill -R spec --exit"
   },
   "author": "Huang Lie Jun",
   "license": "MIT",
@@ -57,6 +58,7 @@
     "eslint-plugin-prettier": "^3.0.1",
     "mocha": "^6.1.4",
     "nodemon": "^1.18.11",
+    "npm-run-all": "^4.1.5",
     "prettier": "^1.17.0",
     "sinon": "^7.3.2"
   }
