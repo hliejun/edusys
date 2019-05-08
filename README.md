@@ -17,7 +17,13 @@ This project focuses on the following:
 
 ## Live Instance
 
-(Work in progress)
+You can access a live instance of this service at this [base url](https://ufinity-edusys.appspot.com). 
+Simply append the endpoint route to this base URL to consume it. 
+
+Please note that this project is not affiliated or produced by Ufinity. 
+The non-mutable application identifier (which could have been better 
+named to prevent trademark infringement) was used by Google Cloud to 
+generate the service link.
 
 ## API Documentation
 
@@ -103,13 +109,16 @@ npm run start:dev
 yarn start:dev
 ```
 
-This is equivalent to running `babel-node` to transpile the ES6 module 
+This is equivalent to migrating and seeding the `MySQL` database, 
+followed by running `babel-node` to transpile the ES6 module 
 at the entrypoint `app/server.js` and executing it with the `nodemon` 
 module locally with a `NODE_ENV=development` environment:
 
 ```bash
 # Refer to package.json under 'scripts' for more details
-NODE_ENV=development nodemon --exec babel-node app/server.js
+NODE_ENV=development ./node_modules/.bin/knex migrate:latest
+NODE_ENV=development ./node_modules/.bin/knex seed:run
+NODE_ENV=development ./node_modules/.bin/nodemon --exec babel-node app/server.js
 ```
 
 Now with the application running, you can make service calls to the root domain `localhost:8080`. 
@@ -188,24 +197,16 @@ The above identifies all test files in the entire project, named under the conve
 
 Running tests will invoke migrations and rollbacks on the database and may cause changes to the database. Please do not use the same database that you use to persist any form of data to test with. In the situation that you share the same test database as with the local API instance, you should remember to invoke:
  ```
-  npm run migrate:dev-latest
+  npm run migrate:dev
  ``` 
-after testing and before you start the server. This is to ensure that your database is up-to-date and created with the correct tables to handle data with.
+after testing and before you start the server. This is automatically done for you when you invoke `npm run start:dev`. 
+This is to ensure that your database is up-to-date and created with the correct tables to handle data with.
 
 In the situation that you need to perform a rollback, you can do:
 ```
 npm run rollback:dev
 ```
 Please check the `package.json` scripts section for more commands and details of how these commands are executed.
-
-### Staging
-
-(Work in progress)
-
-
-### Deployment
-
-(Work in progress)
 
 ## Built With
 
