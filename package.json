@@ -19,7 +19,7 @@
     "seed:make": "NODE_ENV=development knex seed:make",
     "serve:dev": "NODE_ENV=development nodemon --exec babel-node app/server.js",
     "gcp-build": "NODE_ENV=production babel app --out-dir dist",
-    "start": "NODE_ENV=production node dist/server.js",
+    "start": "bash ./scripts/start.bash",
     "start:dev": "run-s migrate:dev seed:dev serve:dev",
     "test:dev": "find ./app -name '*.spec.js' | NODE_ENV=development xargs mocha --require @babel/register --require babel-polyfill -R spec --exit",
     "test": "find ./app -name '*.spec.js' | NODE_ENV=production xargs mocha --require @babel/register --require babel-polyfill -R spec --exit"

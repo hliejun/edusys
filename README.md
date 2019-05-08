@@ -17,13 +17,8 @@ This project focuses on the following:
 
 ## Live Instance
 
-You can access a live instance of this service at this [base url](https://ufinity-edusys.appspot.com). 
-Simply append the endpoint route to this base URL to consume it. 
-
-Please note that this project is not affiliated or produced by Ufinity. 
-The non-mutable application identifier (which could have been better 
-named to prevent trademark infringement) was used by Google Cloud to 
-generate the service link.
+You can access a live instance of this service at this base URL: https://hliejun-edusys.appspot.com. 
+Simply append the endpoint route to the base URL to consume it.
 
 ## API Documentation
 
