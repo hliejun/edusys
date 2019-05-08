@@ -20,5 +20,6 @@ ehthumbs.db
 !.env.example
 *.pem
 
-# Google App Engine generated folder
+# Google App Engine
+app.yaml
 appengine-generated/
